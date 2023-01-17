@@ -234,7 +234,7 @@ def prepare_environment():
                 run_pip(f"install -U -I --no-deps {xformers_windows_package}", "xformers")
             else:
                 print("Installation of xformers is not supported in this version of Python.")
-                print("You can also check this and build manually: https://github.com/lshqqytiger/stable-diffusion-webui/wiki/Xformers#building-xformers-on-windows-by-duckness")
+                print("You can also check this and build manually: https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Xformers#building-xformers-on-windows-by-duckness")
                 if not is_installed("xformers"):
                     exit(0)
         elif platform.system() == "Linux":
@@ -274,7 +274,9 @@ def tests(test_dir):
     if "--ckpt" not in sys.argv:
         sys.argv.append("--ckpt")
         sys.argv.append("./test/test_files/empty.pt")
-    
+    if "--disable-nan-check" not in sys.argv:
+        sys.argv.append("--disable-nan-check")
+
     print(f"Launching Web UI in another process for testing with arguments: {' '.join(sys.argv[1:])}")
 
     os.environ['COMMANDLINE_ARGS'] = ""
