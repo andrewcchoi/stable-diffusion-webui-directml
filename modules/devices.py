@@ -37,17 +37,21 @@ def get_cuda_device_string():
     return "cuda"
 
 
-def get_optimal_device():
+def get_optimal_device_name():
     if torch.cuda.is_available():
-        return torch.device(get_cuda_device_string())
+        return get_cuda_device_string()
 
     if has_mps():
-        return torch.device("mps")
+        return "mps"
 
     if torch_directml.is_available():
-        return dml
-    
-    return cpu
+        return torch_directml.default_device()
+
+    return "cpu"
+
+
+def get_optimal_device():
+    return torch.device(get_optimal_device_name())
 
 
 def get_device_for(task):
@@ -82,11 +86,11 @@ def enable_tf32():
 errors.run(enable_tf32, "Enabling TF32")
 
 cpu = torch.device("cpu")
-dml = torch_directml.device(torch_directml.default_device())
 adl = None
 hMEM = None
 try:
-    if "AMD" in torch_directml.device_name(dml.index):
+    dml = get_optimal_device()
+    if dml.type == "privateuseone" and "AMD" in torch_directml.device_name(dml.index):
         adl = atiadlxx.ATIADLxx()
         hMEM = adl.getMemoryInfo2(0).iHyperMemorySize
     else:
@@ -155,6 +159,8 @@ def test_for_nans(x, where):
             message += " This could be because there's not enough precision to represent the picture. Try adding --no-half-vae commandline argument to fix this."
     else:
         message = "A tensor with all NaNs was produced."
+
+    message += " Use --disable-nan-check commandline argument to disable this check."
 
     raise NansException(message)
 
@@ -265,7 +271,7 @@ if has_mps():
         torch.narrow = lambda *args, **kwargs: ( orig_narrow(*args, **kwargs).clone() )
 
 
-if dml.type == 'privateuseone':
+if get_optimal_device().type == 'privateuseone':
     torch.nn.GroupNorm = GroupNorm
     torch.nn.LayerNorm = LayerNorm
     torch.nn.Linear = Linear
