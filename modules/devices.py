@@ -37,6 +37,15 @@ def get_cuda_device_string():
     return "cuda"
 
 
+def get_dml_device_string():
+    from modules import shared
+
+    if shared.cmd_opts.device_id is not None:
+        return f"privateuseone:{shared.cmd_opts.device_id}"
+
+    return "privateuseone:0"
+
+
 def get_optimal_device_name():
     if torch.cuda.is_available():
         return get_cuda_device_string()
@@ -45,7 +54,7 @@ def get_optimal_device_name():
         return "mps"
 
     if torch_directml.is_available():
-        return torch_directml.default_device()
+        return get_dml_device_string()
 
     return "cpu"
 
@@ -82,14 +91,13 @@ def enable_tf32():
         torch.backends.cudnn.allow_tf32 = True
 
 
-
 errors.run(enable_tf32, "Enabling TF32")
 
 cpu = torch.device("cpu")
 adl = None
 hMEM = None
 try:
-    dml = get_optimal_device()
+    dml = torch_directml.device(torch_directml.default_device())
     if dml.type == "privateuseone" and "AMD" in torch_directml.device_name(dml.index):
         adl = atiadlxx.ATIADLxx()
         hMEM = adl.getMemoryInfo2(0).iHyperMemorySize
@@ -271,7 +279,7 @@ if has_mps():
         torch.narrow = lambda *args, **kwargs: ( orig_narrow(*args, **kwargs).clone() )
 
 
-if get_optimal_device().type == 'privateuseone':
+if torch_directml.is_available():
     torch.nn.GroupNorm = GroupNorm
     torch.nn.LayerNorm = LayerNorm
     torch.nn.Linear = Linear

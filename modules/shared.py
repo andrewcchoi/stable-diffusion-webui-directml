@@ -138,9 +138,10 @@ ui_reorder_categories = [
 ]
 
 cmd_opts.disable_extension_access = (cmd_opts.share or cmd_opts.listen or cmd_opts.server_name) and not cmd_opts.enable_insecure_extension_access
-if devices.adl is None or devices.hMEM is None:
+if devices.adl is None or devices.hMEM is None or (cmd_opts.device_id is not None and cmd_opts.device_id != "0"):
     print("Disabled experimental graphic memory optimizations.")
     cmd_opts.disable_experimental_memopt = True
+
 
 devices.device, devices.device_interrogate, devices.device_gfpgan, devices.device_esrgan, devices.device_codeformer = \
     (devices.cpu if any(y in cmd_opts.use_cpu for y in [x, 'all']) else devices.get_optimal_device() for x in ['sd', 'interrogate', 'gfpgan', 'esrgan', 'codeformer'])
