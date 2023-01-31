@@ -1,53 +1,11 @@
-from collections import namedtuple, deque
-import numpy as np
-from math import floor
-import torch
-import tqdm
-from PIL import Image
-import inspect
-import k_diffusion.sampling
-import torchsde._brownian.brownian_interval
-import ldm.models.diffusion.ddim
-import ldm.models.diffusion.plms
-from modules import prompt_parser, devices, processing, images, sd_vae_approx
+from modules import sd_samplers_compvis, sd_samplers_kdiffusion, shared
 
-from modules.shared import opts, cmd_opts, state
-import modules.shared as shared
-from modules.script_callbacks import CFGDenoiserParams, cfg_denoiser_callback
-
-
-SamplerData = namedtuple('SamplerData', ['name', 'constructor', 'aliases', 'options'])
-
-samplers_k_diffusion = [
-    ('Euler a', 'sample_euler_ancestral', ['k_euler_a', 'k_euler_ancestral'], {}),
-    ('Euler', 'sample_euler', ['k_euler'], {}),
-    ('LMS', 'sample_lms', ['k_lms'], {}),
-    ('Heun', 'sample_heun', ['k_heun'], {}),
-    ('DPM2', 'sample_dpm_2', ['k_dpm_2'], {'discard_next_to_last_sigma': True}),
-    ('DPM2 a', 'sample_dpm_2_ancestral', ['k_dpm_2_a'], {'discard_next_to_last_sigma': True}),
-    ('DPM++ 2S a', 'sample_dpmpp_2s_ancestral', ['k_dpmpp_2s_a'], {}),
-    ('DPM++ 2M', 'sample_dpmpp_2m', ['k_dpmpp_2m'], {}),
-    ('DPM++ SDE', 'sample_dpmpp_sde', ['k_dpmpp_sde'], {}),
-    ('DPM fast', 'sample_dpm_fast', ['k_dpm_fast'], {}),
-    ('DPM adaptive', 'sample_dpm_adaptive', ['k_dpm_ad'], {}),
-    ('LMS Karras', 'sample_lms', ['k_lms_ka'], {'scheduler': 'karras'}),
-    ('DPM2 Karras', 'sample_dpm_2', ['k_dpm_2_ka'], {'scheduler': 'karras', 'discard_next_to_last_sigma': True}),
-    ('DPM2 a Karras', 'sample_dpm_2_ancestral', ['k_dpm_2_a_ka'], {'scheduler': 'karras', 'discard_next_to_last_sigma': True}),
-    ('DPM++ 2S a Karras', 'sample_dpmpp_2s_ancestral', ['k_dpmpp_2s_a_ka'], {'scheduler': 'karras'}),
-    ('DPM++ 2M Karras', 'sample_dpmpp_2m', ['k_dpmpp_2m_ka'], {'scheduler': 'karras'}),
-    ('DPM++ SDE Karras', 'sample_dpmpp_sde', ['k_dpmpp_sde_ka'], {'scheduler': 'karras'}),
-]
-
-samplers_data_k_diffusion = [
-    SamplerData(label, lambda model, funcname=funcname: KDiffusionSampler(funcname, model), aliases, options)
-    for label, funcname, aliases, options in samplers_k_diffusion
-    if hasattr(k_diffusion.sampling, funcname)
-]
+# imports for functions that previously were here and are used by other modules
+from modules.sd_samplers_common import samples_to_image_grid, sample_to_image
 
 all_samplers = [
-    *samplers_data_k_diffusion,
-    SamplerData('DDIM', lambda model: VanillaStableDiffusionSampler(ldm.models.diffusion.ddim.DDIMSampler, model), [], {}),
-    SamplerData('PLMS', lambda model: VanillaStableDiffusionSampler(ldm.models.diffusion.plms.PLMSSampler, model), [], {}),
+    *sd_samplers_kdiffusion.samplers_data_k_diffusion,
+    *sd_samplers_compvis.samplers_data_compvis,
 ]
 all_samplers_map = {x.name: x for x in all_samplers}
 
@@ -73,8 +31,8 @@ def create_sampler(name, model):
 def set_samplers():
     global samplers, samplers_for_img2img
 
-    hidden = set(opts.hide_samplers)
-    hidden_img2img = set(opts.hide_samplers + ['PLMS'])
+    hidden = set(shared.opts.hide_samplers)
+    hidden_img2img = set(shared.opts.hide_samplers + ['PLMS'])
 
     samplers = [x for x in all_samplers if x.name not in hidden]
     samplers_for_img2img = [x for x in all_samplers if x.name not in hidden_img2img]
@@ -87,6 +45,7 @@ def set_samplers():
 
 
 set_samplers()
+<<<<<<< HEAD
 
 sampler_extra_params = {
     'sample_euler': ['s_churn', 's_tmin', 's_tmax', 's_noise'],
@@ -550,3 +509,5 @@ class KDiffusionSampler:
 
         return samples
 
+=======
+>>>>>>> AUTOMATIC1111-master
