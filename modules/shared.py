@@ -169,7 +169,7 @@ if device.type == 'privateuseone':
     if devices.device_interrogate.type == 'privateuseone':
         cmd_opts.use_cpu.append('interrogate')
         devices.device_interrogate = devices.cpu
-        print('Interrogate will be fallen back to cpu. Because DirectML device does not support it.')
+        print('Interrogations are fallen back to cpu. This doesn\'t affect on image generation. But if you want to use interrogate (CLIP or DeepBooru), check out this issue: https://github.com/lshqqytiger/stable-diffusion-webui-directml/issues/10')
     
     if not cmd_opts.no_half:
         import torch
