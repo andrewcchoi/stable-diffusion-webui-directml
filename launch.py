@@ -345,7 +345,6 @@ def tests(test_dir):
         sys.argv.append("--api")
     if "--ckpt" not in sys.argv:
         sys.argv.append("--ckpt")
-        sys.argv.append("./test/test_files/empty.pt")
         sys.argv.append(os.path.join(script_path, "test/test_files/empty.pt"))
     if "--disable-nan-check" not in sys.argv:
         sys.argv.append("--disable-nan-check")
