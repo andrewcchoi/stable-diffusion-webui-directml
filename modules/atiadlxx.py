@@ -74,5 +74,7 @@ class ATIADLxx(object):
                     return 1 # failed to get dedicated vram usage
             else:
                 return 2 # not AMDGPU
-        except RuntimeError:
+        except RuntimeError as e:
+            import traceback
+            print(f"\nUnknown error occurred while testing whether experimental memory optimization can be applied!\nPlease copy full traceback below and create a new issue: https://github.com/lshqqytiger/stable-diffusion-webui-directml/issues/new/choose\n\n↓↓↓↓↓\n{traceback.format_exc()}↑↑↑↑↑")
             return 3 # unknown
