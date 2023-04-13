@@ -98,9 +98,12 @@ hMEM = None
 try:
     dml = torch_directml.device(torch_directml.default_device())
     if dml.type == "privateuseone" and "AMD" in torch_directml.device_name(dml.index):
-        from modules import atiadlxx
-        adl = atiadlxx.ATIADLxx()
-        hMEM = adl.getMemoryInfo2(0).iHyperMemorySize
+        try:
+            from modules import atiadlxx
+            adl = atiadlxx.ATIADLxx()
+            hMEM = adl.getMemoryInfo2(0).iHyperMemorySize
+        except AttributeError:
+            print("Warning: experimental graphic memory optimization is disabled because failed to get the dedicated vram usage.")
     else:
         print("Warning: experimental graphic memory optimization is disabled due to gpu vendor. Currently this optimization is only available for AMDGPUs.")
 except RuntimeError as e:
