@@ -58,11 +58,14 @@ cmd_opts.disable_extension_access = (cmd_opts.share or cmd_opts.listen or cmd_op
 if cmd_opts.device_id is not None and cmd_opts.device_id != "0":
     cmd_opts.disable_experimental_memopt = True
 
-if cmd_opts.disable_experimental_memopt:
-    print("Disabled experimental graphic memory optimizations.")
-else:
+if not cmd_opts.disable_experimental_memopt:
     from modules.atiadlxx import ATIADLxx
     devices.adl = ATIADLxx.create()
+    if devices.adl is None:
+        cmd_opts.disable_experimental_memopt = True
+
+if cmd_opts.disable_experimental_memopt:
+    print("Disabled experimental graphic memory optimizations.")
 
 
 devices.device, devices.device_interrogate, devices.device_gfpgan, devices.device_esrgan, devices.device_codeformer = \

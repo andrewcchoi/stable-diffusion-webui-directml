@@ -78,7 +78,7 @@ class ATIADLxx(object):
                 except AttributeError:
                     return 1 # failed to get dedicated vram usage
                 except RuntimeError as e:
-                    if "ADL2" in e:
+                    if "ADL2" in str(e):
                         return 2
                     return 4
             else:
