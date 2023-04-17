@@ -51,21 +51,18 @@ class ATIADLxx(object):
         return (self.iHyperMemorySize, self.getDedicatedVRAMUsage(0))
 
     def create():
-        match ATIADLxx.test():
-            case 0:
-                return ATIADLxx()
-            case 1:
-                print("Warning: experimental graphic memory optimization is disabled because failed to get dedicated vram usage.")
-                return None
-            case 2:
-                print("Warning: experimental graphic memory optimization is disabled because your GPU driver seems not to support required features.")
-                return None
-            case 3:
-                print("Warning: experimental graphic memory optimization is disabled due to gpu vendor. Currently this optimization is only available for AMDGPUs.")
-                return None
-            case 4:
-                print("Warning: experimental graphic memory optimization for AMDGPU is disabled. Because there is an unknown error.")
-                return None
+        res = ATIADLxx.test()
+        if res == 0:
+            return ATIADLxx()
+        if res == 1:
+            print("Warning: experimental graphic memory optimization is disabled because failed to get dedicated vram usage.")
+        if res == 2:
+            print("Warning: experimental graphic memory optimization is disabled because your GPU driver seems not to support required features.")
+        if res == 3:
+            print("Warning: experimental graphic memory optimization is disabled due to gpu vendor. Currently this optimization is only available for AMDGPUs.")
+        if res == 4:
+            print("Warning: experimental graphic memory optimization for AMDGPU is disabled. Because there is an unknown error.")
+        return None
 
     def test():
         try:
@@ -84,6 +81,5 @@ class ATIADLxx(object):
             else:
                 return 3 # not AMDGPU
         except:
-            import traceback
-            print(f"\nUnknown error occurred while testing whether experimental memory optimization can be applied!\nPlease copy full traceback below and create a new issue: https://github.com/lshqqytiger/stable-diffusion-webui-directml/issues/new/choose\n\n↓↓↓↓↓\n{traceback.format_exc()}↑↑↑↑↑")
+            print(f"\nUnknown error occurred while testing whether experimental memory optimization can be applied!")
             return 4 # unknown
