@@ -81,5 +81,6 @@ class ATIADLxx(object):
             else:
                 return 3 # not AMDGPU
         except:
-            print(f"\nUnknown error occurred while testing whether experimental memory optimization can be applied!")
+            import traceback
+            print(f"\nUnknown error occurred while testing whether experimental memory optimization can be applied!\nPlease copy full traceback below and create a new issue: https://github.com/lshqqytiger/stable-diffusion-webui-directml/issues/new/choose\n\n↓↓↓↓↓\n{traceback.format_exc()}↑↑↑↑↑")
             return 4 # unknown
