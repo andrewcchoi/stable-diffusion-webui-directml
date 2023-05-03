@@ -2,6 +2,7 @@
 import subprocess
 import os
 import sys
+import shutil
 import importlib.util
 import shlex
 import platform
@@ -222,7 +223,13 @@ def run_extensions_installers(settings_file):
 
 
 def prepare_environment():
-    torch_command = os.environ.get('TORCH_COMMAND', "pip install torch==2.0.0 torchvision==0.15.1 torch-directml")
+    run_pip("install torch-directml", "DirectML")
+    import torch_directml
+    device_name = torch_directml.device_name(torch_directml.default_device())
+    if 'NVIDIA' in device_name or 'GeForce' in device_name:
+        torch_command = os.environ.get('TORCH_COMMAND', 'torch torchaudio torchvision --index-url https://download.pytorch.org/whl/cu118')
+    else:
+        torch_command = os.environ.get('TORCH_COMMAND', "pip install torch==2.0.0 torchvision==0.15.1 torch-directml")
     requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
 
     xformers_package = os.environ.get('XFORMERS_PACKAGE', 'xformers==0.0.17')
