@@ -44,6 +44,14 @@ sampler_extra_params = {
     'sample_dpm_2': ['s_churn', 's_tmin', 's_tmax', 's_noise'],
 }
 
+k_diffusion_samplers_map = {x.name: x for x in samplers_data_k_diffusion}
+k_diffusion_scheduler = {
+    'Automatic': None,
+    'karras': k_diffusion.sampling.get_sigmas_karras,
+    'exponential': k_diffusion.sampling.get_sigmas_exponential,
+    'polyexponential': k_diffusion.sampling.get_sigmas_polyexponential
+}
+
 
 class CFGDenoiser(torch.nn.Module):
     """
@@ -124,6 +132,16 @@ class CFGDenoiser(torch.nn.Module):
             skip_uncond = True
             x_in = x_in[:-batch_size]
             sigma_in = sigma_in[:-batch_size]
+
+        # TODO add infotext entry
+        if shared.opts.pad_cond_uncond and tensor.shape[1] != uncond.shape[1]:
+            empty = shared.sd_model.cond_stage_model_empty_prompt
+            num_repeats = (tensor.shape[1] - uncond.shape[1]) // empty.shape[1]
+
+            if num_repeats < 0:
+                tensor = torch.cat([tensor, empty.repeat((tensor.shape[0], -num_repeats, 1))], axis=1)
+            elif num_repeats > 0:
+                uncond = torch.cat([uncond, empty.repeat((uncond.shape[0], num_repeats, 1))], axis=1)
 
         if tensor.shape[1] == uncond.shape[1] or skip_uncond:
             if is_edit_model:
@@ -255,6 +273,13 @@ class KDiffusionSampler:
 
         try:
             return func()
+        except RecursionError:
+            print(
+                'Encountered RecursionError during sampling, returning last latent. '
+                'rho >5 with a polyexponential scheduler may cause this error. '
+                'You should try to use a smaller rho value instead.'
+            )
+            return self.last_latent
         except sd_samplers_common.InterruptedException:
             return self.last_latent
 
@@ -294,6 +319,31 @@ class KDiffusionSampler:
 
         if p.sampler_noise_scheduler_override:
             sigmas = p.sampler_noise_scheduler_override(steps)
+        elif opts.k_sched_type != "Automatic":
+            m_sigma_min, m_sigma_max = (self.model_wrap.sigmas[0].item(), self.model_wrap.sigmas[-1].item())
+            sigma_min, sigma_max = (0.1, 10) if opts.use_old_karras_scheduler_sigmas else (m_sigma_min, m_sigma_max)
+            sigmas_kwargs = {
+                'sigma_min': sigma_min,
+                'sigma_max': sigma_max,
+            }
+
+            sigmas_func = k_diffusion_scheduler[opts.k_sched_type]
+            p.extra_generation_params["Schedule type"] = opts.k_sched_type
+
+            if opts.sigma_min != m_sigma_min and opts.sigma_min != 0:
+                sigmas_kwargs['sigma_min'] = opts.sigma_min
+                p.extra_generation_params["Schedule min sigma"] = opts.sigma_min
+            if opts.sigma_max != m_sigma_max and opts.sigma_max != 0:
+                sigmas_kwargs['sigma_max'] = opts.sigma_max
+                p.extra_generation_params["Schedule max sigma"] = opts.sigma_max
+
+            default_rho = 1. if opts.k_sched_type == "polyexponential" else 7.
+
+            if opts.k_sched_type != 'exponential' and opts.rho != 0 and opts.rho != default_rho:
+                sigmas_kwargs['rho'] = opts.rho
+                p.extra_generation_params["Schedule rho"] = opts.rho
+
+            sigmas = sigmas_func(n=steps, **sigmas_kwargs, device=shared.device)
         elif self.config is not None and self.config.options.get('scheduler', None) == 'karras':
             sigma_min, sigma_max = (0.1, 10) if opts.use_old_karras_scheduler_sigmas else (self.model_wrap.sigmas[0].item(), self.model_wrap.sigmas[-1].item())
 
