@@ -20,7 +20,7 @@ import logging
 
 logging.getLogger("xformers").addFilter(lambda record: 'A matching Triton is not available' not in record.getMessage())
 
-from modules import paths, timer, import_hook, errors  # noqa: F401
+from modules import paths, timer, import_hook, errors, devices  # noqa: F401
 
 startup_timer = timer.Timer()
 
@@ -58,6 +58,7 @@ import modules.sd_hijack
 import modules.sd_hijack_optimizations
 import modules.sd_models
 import modules.sd_vae
+import modules.sd_unet
 import modules.txt2img
 import modules.script_callbacks
 import modules.textual_inversion.textual_inversion
@@ -291,6 +292,9 @@ def initialize_rest(*, reload_script_modules=False):
     modules.sd_hijack.list_optimizers()
     startup_timer.record("scripts list_optimizers")
 
+    modules.sd_unet.list_unets()
+    startup_timer.record("scripts list_unets")
+
     def load_model():
         """
         Accesses shared.sd_model property to load model.
@@ -305,6 +309,8 @@ def initialize_rest(*, reload_script_modules=False):
             modules.sd_hijack.apply_optimizations()
 
     Thread(target=load_model).start()
+
+    Thread(target=devices.first_time_calculation).start()
 
     shared.reload_hypernetworks()
     startup_timer.record("reload hypernetworks")
@@ -381,17 +387,6 @@ def webui():
 
         gradio_auth_creds = list(get_gradio_auth_creds()) or None
 
-        # this restores the missing /docs endpoint
-        if launch_api and not hasattr(FastAPI, 'original_setup'):
-            # TODO: replace this with `launch(app_kwargs=...)` if https://github.com/gradio-app/gradio/pull/4282 gets merged
-            def fastapi_setup(self):
-                self.docs_url = "/docs"
-                self.redoc_url = "/redoc"
-                self.original_setup()
-
-            FastAPI.original_setup = FastAPI.setup
-            FastAPI.setup = fastapi_setup
-
         app, local_url, share_url = shared.demo.launch(
             share=cmd_opts.share,
             server_name=server_name,
@@ -404,6 +399,10 @@ def webui():
             inbrowser=cmd_opts.autolaunch,
             prevent_thread_lock=True,
             allowed_paths=cmd_opts.gradio_allowed_path,
+            app_kwargs={
+                "docs_url": "/docs",
+                "redoc_url": "/redoc",
+            },
         )
         if cmd_opts.add_stop_route:
             app.add_route("/_stop", stop_route, methods=["POST"])
