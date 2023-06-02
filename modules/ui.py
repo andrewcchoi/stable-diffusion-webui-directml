@@ -1149,8 +1149,8 @@ def create_ui():
                 with gr.Tabs(elem_id="olive_tabs"):
                     with gr.Tab(label="Optimize ONNX using Olive"):
                         olive_model_id = gr.Textbox(label='Model ID', value="runwayml/stable-diffusion-v1-5", elem_id="olive_model_id", info="The huggingface identifier of the model to download and optimize.")
-                        olive_source_dir = gr.Textbox(label='Onnx model folder', value="models/ONNX/runwayml/stable-diffusion-v1-5", elem_id="olive_source_dir")
-                        olive_dir = gr.Textbox(label='Output folder', value="models/ONNX-Olive/runwayml/stable-diffusion-v1-5", elem_id="olive_dir")
+                        olive_source_dir = gr.Textbox(label='Onnx model folder', value="stable-diffusion-v1-5", elem_id="olive_source_dir")
+                        olive_dir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_dir")
 
                         with gr.Column(elem_id="olive_width"):
                             min_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Minimum width", value=512, elem_id="olive_min_width")
