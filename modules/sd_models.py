@@ -8,7 +8,7 @@ import torch
 import re
 import safetensors.torch
 from omegaconf import OmegaConf
-from os import mkdir
+from os import mkdir, listdir
 from urllib import request
 import ldm.modules.midas as midas
 
@@ -19,7 +19,7 @@ from modules.sd_hijack_inpainting import do_inpainting_hijack
 from modules.timer import Timer
 import tomesd
 
-model_dir = "Stable-diffusion"
+model_dir = "ONNX-Olive" if shared.cmd_opts.olive else "Stable-diffusion"
 model_path = os.path.abspath(os.path.join(paths.models_path, model_dir))
 
 checkpoints_list = {}
@@ -45,9 +45,9 @@ class CheckpointInfo:
         self.name = name
         self.name_for_extra = os.path.splitext(os.path.basename(filename))[0]
         self.model_name = os.path.splitext(name.replace("/", "_").replace("\\", "_"))[0]
-        self.hash = model_hash(filename)
+        self.hash = model_hash(filename) if not shared.cmd_opts.olive else None
 
-        self.sha256 = hashes.sha256_from_cache(self.filename, f"checkpoint/{name}")
+        self.sha256 = hashes.sha256_from_cache(self.filename, f"checkpoint/{name}") if not shared.cmd_opts.olive else None
         self.shorthash = self.sha256[0:10] if self.sha256 else None
 
         self.title = name if self.shorthash is None else f'{name} [{self.shorthash}]'
@@ -69,6 +69,9 @@ class CheckpointInfo:
             checkpoint_alisases[id] = self
 
     def calculate_shorthash(self):
+        if shared.cmd_opts.olive:
+            return
+        
         self.sha256 = hashes.sha256(self.filename, f"checkpoint/{self.name}")
         if self.sha256 is None:
             return
@@ -121,7 +124,10 @@ def list_models():
     else:
         model_url = "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors"
 
-    model_list = modelloader.load_models(model_path=model_path, model_url=model_url, command_path=shared.cmd_opts.ckpt_dir, ext_filter=[".ckpt", ".safetensors"], download_name="v1-5-pruned-emaonly.safetensors", ext_blacklist=[".vae.ckpt", ".vae.safetensors"])
+    if shared.cmd_opts.olive:
+        model_list = [f for f in listdir(model_path) if os.path.isdir(os.path.join(model_path, f))]
+    else:
+        model_list = modelloader.load_models(model_path=model_path, model_url=model_url, command_path=shared.cmd_opts.ckpt_dir, ext_filter=[".ckpt", ".safetensors"], download_name="v1-5-pruned-emaonly.safetensors", ext_blacklist=[".vae.ckpt", ".vae.safetensors"])
 
     if os.path.exists(cmd_ckpt):
         checkpoint_info = CheckpointInfo(cmd_ckpt)
@@ -447,6 +453,12 @@ def load_model(checkpoint_info=None, already_loaded_state_dict=None):
         gc.collect()
         devices.torch_gc()
 
+    if shared.cmd_opts.olive:
+        from modules.sd_olive import OliveOptimizedModel
+        model_data.set_sd_model(OliveOptimizedModel(checkpoint_info.name))
+        print(f"Model {model_data.sd_model.path} loaded.")
+        return model_data.sd_model
+
     do_inpainting_hijack()
 
     timer = Timer()
@@ -520,6 +532,10 @@ def reload_model_weights(sd_model=None, info=None):
     if not sd_model:
         sd_model = model_data.sd_model
 
+    if shared.cmd_opts.olive:
+        model_data.set_sd_model(sd_model)
+        return sd_model
+
     if sd_model is None:  # previous model load failed
         current_checkpoint_info = None
     else:
@@ -572,6 +588,9 @@ def reload_model_weights(sd_model=None, info=None):
 def unload_model_weights(sd_model=None, info=None):
     from modules import devices, sd_hijack
     timer = Timer()
+
+    if shared.cmd_opts.olive:
+        return sd_model
 
     if model_data.sd_model:
         model_data.sd_model.to(devices.cpu)

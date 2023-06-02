@@ -15,7 +15,8 @@ from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_grad
 
 from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, ui_common, ui_postprocessing, progress, ui_loadsave
 from modules.ui_components import FormRow, FormGroup, ToolButton, FormHTML
-from modules.paths import script_path, data_path
+from modules.paths import script_path, data_path, models_path
+from modules.sd_olive import optimize
 
 from modules.shared import opts, cmd_opts
 
@@ -1142,6 +1143,53 @@ def create_ui():
                 with gr.Group(elem_id="modelmerger_results_panel"):
                     modelmerger_result = gr.HTML(elem_id="modelmerger_result", show_label=False)
 
+    with gr.Blocks(analytics_enabled=False) as olive_interface:
+        with gr.Row().style(equal_height=False):
+            with gr.Column(variant='panel'):
+                with gr.Tabs(elem_id="olive_tabs"):
+                    with gr.Tab(label="Optimize ONNX using Olive"):
+                        olive_model_id = gr.Textbox(label='Model ID', value="runwayml/stable-diffusion-v1-5", elem_id="olive_model_id", info="The huggingface identifier of the model to download and optimize.")
+                        olive_source_dir = gr.Textbox(label='Onnx model folder', value="models/ONNX/runwayml/stable-diffusion-v1-5", elem_id="olive_source_dir")
+                        olive_dir = gr.Textbox(label='Output folder', value="models/ONNX-Olive/runwayml/stable-diffusion-v1-5", elem_id="olive_dir")
+
+                        with gr.Column(elem_id="olive_width"):
+                            min_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Minimum width", value=512, elem_id="olive_min_width")
+                            max_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Maximum width", value=512, elem_id="olive_max_width")
+
+                        with gr.Column(elem_id="olive_height"):
+                            min_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Minimum height", value=512, elem_id="olive_min_height")
+                            max_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Maximum height", value=512, elem_id="olive_max_height")
+
+                        with gr.Column(elem_id="olive_batch_size"):
+                            min_bs = gr.Slider(minimum=1, maximum=16, step=1, label="Minimum batch size", value=1, elem_id="olive_min_bs")
+                            max_bs = gr.Slider(minimum=1, maximum=16, step=1, label="Maximum batch size", value=1, elem_id="olive_max_bs")
+
+                        with gr.Column(elem_id="olive_token_count"):
+                            min_token_count = gr.Slider(minimum=75, maximum=750, step=75, label="Minimum prompt token count", value=75, elem_id="olive_min_token_count")
+                            max_token_count = gr.Slider(minimum=75, maximum=750, step=75, label="Maximum prompt token count", value=75, elem_id="olive_max_token_count")
+
+                        with FormGroup(elem_id="olive_submodels", elem_classes="checkboxes-row", variant="compact"):
+                            olive_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_safety_checker")
+                            olive_text_encoder = gr.Checkbox(label='Text Encoder', value=True, elem_id="olive_text_encoder")
+                            olive_unet = gr.Checkbox(label='UNet', value=True, elem_id="olive_unet")
+                            olive_vae_decoder = gr.Checkbox(label='VAE Decoder', value=True, elem_id="olive_vae_decoder")
+                            olive_vae_encoder = gr.Checkbox(label='VAE Encoder', value=True, elem_id="olive_vae_encoder")
+
+                        with FormRow(elem_classes="checkboxes-row", variant="compact"):
+                            use_fp16 = gr.Checkbox(label='Use half floats', value=True, elem_id="olive_fp16")
+
+                        button_export_olive = gr.Button(value="Optimize ONNX model using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
+
+            with gr.Column(variant='panel'):
+                olive_result = gr.Label(elem_id="olive_result", value="", show_label=False)
+                olive_info = gr.HTML(elem_id="olive_info", value="")
+
+        button_export_olive.click(
+            wrap_gradio_gpu_call(optimize, extra_outputs=[""]),
+            inputs=[olive_model_id, olive_source_dir, olive_dir, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16],
+            outputs=[olive_result, olive_info],
+        )
+
     with gr.Blocks(analytics_enabled=False) as train_interface:
         with gr.Row().style(equal_height=False):
             gr.HTML(value="<p style='margin-bottom: 0.7em'>See <b><a href=\"https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Textual-Inversion\">wiki</a></b> for detailed explanation.</p>")
@@ -1658,6 +1706,9 @@ def create_ui():
         (modelmerger_interface, "Checkpoint Merger", "modelmerger"),
         (train_interface, "Train", "train"),
     ]
+
+    if cmd_opts.olive:
+        interfaces += [(olive_interface, "Olive", "olive")]
 
     interfaces += script_callbacks.ui_tabs_callback()
     interfaces += [(settings_interface, "Settings", "settings")]
