@@ -12,13 +12,13 @@ from diffusers.pipelines.onnx_utils import ORT_TO_NP_TYPE
 from olive.model import ONNXModel
 from olive.workflows import run as olive_run
 
-from modules import shared, images, devices
+from modules import shared, images, devices, sd_samplers
 from modules.paths_internal import sd_configs_path, models_path
 from modules.sd_olive_scripts import get_base_model_name
 from modules.processing import Processed, get_fixed_seed
 
 def __call__(
-    self,
+    self: OnnxStableDiffusionPipeline,
     p,
     prompt = None,
     height = 512,
@@ -36,6 +36,7 @@ def __call__(
     return_dict: bool = True,
     callback = None,
     callback_steps: int = 1,
+    scheduler = None,
 ):
     # check inputs. Raise error if not correct
     self.check_inputs(
@@ -101,7 +102,22 @@ def __call__(
         if shared.state.skipped:
             shared.state.skipped = False
 
+        if shared.state.interrupted:
+            break
+
         p.prompts = p.all_prompts[i * p.batch_size:(i + 1) * p.batch_size]
+        p.negative_prompts = p.all_negative_prompts[i * p.batch_size:(i + 1) * p.batch_size]
+        p.seeds = p.all_seeds[i * p.batch_size:(i + 1) * p.batch_size]
+        p.subseeds = p.all_subseeds[i * p.batch_size:(i + 1) * p.batch_size]
+        
+        if p.scripts is not None:
+            p.scripts.before_process_batch(p, batch_number=i, prompts=p.prompts, seeds=p.seeds, subseeds=p.subseeds)
+
+        if len(p.prompts) == 0:
+            break
+
+        if p.scripts is not None:
+            p.scripts.process_batch(p, batch_number=i, prompts=p.prompts, seeds=p.seeds, subseeds=p.subseeds)
 
         if p.n_iter > 1:
             shared.state.job = f"Batch {i+1} out of {p.n_iter}"
@@ -165,6 +181,10 @@ def __call__(
 
     return StableDiffusionPipelineOutput(images=image, nsfw_content_detected=has_nsfw_concept)
 OnnxStableDiffusionPipeline.__call__ = __call__
+
+def convert_to_onnx(model: str, output_dir: str):
+    pipeline = StableDiffusionPipeline.from_ckpt(Path(models_path) / "Stable-diffusion" / model, torch_dtype=torch.float32)
+    pipeline.save_pretrained(Path(models_path) / "ONNX" / output_dir)
 
 def optimize(model_id: str, unoptimized_dir: str, optimized_dir: str, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16):
     unoptimized_dir = Path(models_path) / "ONNX" / unoptimized_dir
@@ -265,8 +285,6 @@ def optimize(model_id: str, unoptimized_dir: str, optimized_dir: str, olive_safe
 
     shared.refresh_checkpoints()
     print(f"Optimization complete.")
-
-    return f'Saved as {unoptimized_dir}', ''
 
 class OliveOptimizedModel:
     def __init__(self, path: str):
@@ -430,10 +448,16 @@ class OliveOptimizedProcessingTxt2Img:
 
         output_images = []
 
-        result = self.pipeline(self, [self.prompt] * self.batch_size, num_inference_steps=self.steps)
-
-        for n in range(self.n_iter):
-            image = result.images[n]
+        for i in range(self.batch_size):
+            result = self.pipeline(self,
+                [self.prompt] * self.batch_size,
+                negative_prompt=self.negative_prompt,
+                num_inference_steps=self.steps,
+                generator=torch.Generator(),
+                height=self.height,
+                width=self.width,
+            )
+            image = result.images[0]
             images.save_image(image, self.outpath_samples, "")
             output_images.append(image)
 

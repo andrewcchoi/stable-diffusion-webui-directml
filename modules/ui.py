@@ -16,7 +16,6 @@ from modules.call_queue import wrap_gradio_gpu_call, wrap_queued_call, wrap_grad
 from modules import sd_hijack, sd_models, localization, script_callbacks, ui_extensions, deepbooru, sd_vae, extra_networks, ui_common, ui_postprocessing, progress, ui_loadsave
 from modules.ui_components import FormRow, FormGroup, ToolButton, FormHTML
 from modules.paths import script_path, data_path, models_path
-from modules.sd_olive import optimize
 
 from modules.shared import opts, cmd_opts
 
@@ -35,6 +34,9 @@ from modules.textual_inversion import textual_inversion
 import modules.hypernetworks.ui
 from modules.generation_parameters_copypaste import image_from_url_text
 import modules.extras
+
+if shared.cmd_opts.olive:
+    from modules.sd_olive import optimize, convert_to_onnx
 
 warnings.filterwarnings("default" if opts.show_warnings else "ignore", category=UserWarning)
 
@@ -1147,6 +1149,22 @@ def create_ui():
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
                 with gr.Tabs(elem_id="olive_tabs"):
+                    with gr.Tab(label="Convert checkpoint to ONNX"):
+                        olive_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="olive_model_name", label="Checkpoint file")
+                        create_refresh_button(primary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "olive_refresh_checkpoint")
+                        olive_onnx_output = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_dir")
+
+                        button_convert_to_onnx = gr.Button(value="Convert checkpoint to ONNX", variant='primary', elem_id="olive_convert_to_onnx")
+
+        button_convert_to_onnx.click(
+            wrap_gradio_gpu_call(convert_to_onnx, extra_outputs=[""]),
+            inputs=[olive_model_name, olive_onnx_output],
+            outputs=[],
+        )
+
+        with gr.Row().style(equal_height=False):
+            with gr.Column(variant='panel'):
+                with gr.Tabs(elem_id="olive_tabs"):
                     with gr.Tab(label="Optimize ONNX using Olive"):
                         olive_model_id = gr.Textbox(label='Model ID', value="runwayml/stable-diffusion-v1-5", elem_id="olive_model_id", info="The huggingface identifier of the model to download and optimize.")
                         olive_source_dir = gr.Textbox(label='Onnx model folder', value="stable-diffusion-v1-5", elem_id="olive_source_dir")
@@ -1180,14 +1198,10 @@ def create_ui():
 
                         button_export_olive = gr.Button(value="Optimize ONNX model using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
 
-            with gr.Column(variant='panel'):
-                olive_result = gr.Label(elem_id="olive_result", value="", show_label=False)
-                olive_info = gr.HTML(elem_id="olive_info", value="")
-
         button_export_olive.click(
             wrap_gradio_gpu_call(optimize, extra_outputs=[""]),
             inputs=[olive_model_id, olive_source_dir, olive_dir, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16],
-            outputs=[olive_result, olive_info],
+            outputs=[],
         )
 
     with gr.Blocks(analytics_enabled=False) as train_interface:
