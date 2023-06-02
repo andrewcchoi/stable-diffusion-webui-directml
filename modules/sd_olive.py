@@ -1,3 +1,4 @@
+import os
 import json
 import torch
 import numpy as np
@@ -12,9 +13,8 @@ from diffusers.pipelines.onnx_utils import ORT_TO_NP_TYPE
 from olive.model import ONNXModel
 from olive.workflows import run as olive_run
 
-from modules import shared, images, devices, sd_samplers
+from modules import shared, images, devices, sd_olive_scripts
 from modules.paths_internal import sd_configs_path, models_path
-from modules.sd_olive_scripts import get_base_model_name
 from modules.processing import Processed, get_fixed_seed
 
 def __call__(
@@ -105,16 +105,8 @@ def __call__(
         if shared.state.interrupted:
             break
 
-        p.prompts = p.all_prompts[i * p.batch_size:(i + 1) * p.batch_size]
-        p.negative_prompts = p.all_negative_prompts[i * p.batch_size:(i + 1) * p.batch_size]
-        p.seeds = p.all_seeds[i * p.batch_size:(i + 1) * p.batch_size]
-        p.subseeds = p.all_subseeds[i * p.batch_size:(i + 1) * p.batch_size]
-        
         if p.scripts is not None:
             p.scripts.before_process_batch(p, batch_number=i, prompts=p.prompts, seeds=p.seeds, subseeds=p.subseeds)
-
-        if len(p.prompts) == 0:
-            break
 
         if p.scripts is not None:
             p.scripts.process_batch(p, batch_number=i, prompts=p.prompts, seeds=p.seeds, subseeds=p.subseeds)
@@ -182,11 +174,7 @@ def __call__(
     return StableDiffusionPipelineOutput(images=image, nsfw_content_detected=has_nsfw_concept)
 OnnxStableDiffusionPipeline.__call__ = __call__
 
-def convert_to_onnx(model: str, output_dir: str):
-    pipeline = StableDiffusionPipeline.from_ckpt(Path(models_path) / "Stable-diffusion" / model, torch_dtype=torch.float32)
-    pipeline.save_pretrained(Path(models_path) / "ONNX" / output_dir)
-
-def optimize(model_id: str, unoptimized_dir: str, optimized_dir: str, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16):
+def optimize(checkpoint: str, unoptimized_dir: str, optimized_dir: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, use_fp16: bool, sample_height_dim: int, sample_width_dim: int, sample_height: int, sample_width: int):
     unoptimized_dir = Path(models_path) / "ONNX" / unoptimized_dir
     optimized_dir = Path(models_path) / "ONNX-Olive" / optimized_dir
     
@@ -194,23 +182,28 @@ def optimize(model_id: str, unoptimized_dir: str, optimized_dir: str, olive_safe
     shutil.rmtree(unoptimized_dir, ignore_errors=True)
     shutil.rmtree(optimized_dir, ignore_errors=True)
 
-    base_model_id = get_base_model_name(model_id)
-
-    pipeline = StableDiffusionPipeline.from_pretrained(base_model_id, torch_dtype=torch.float32)
+    pipeline = StableDiffusionPipeline.from_ckpt(os.path.join(models_path, "Stable-diffusion", checkpoint), torch_dtype=torch.float32)
+    pipeline.save_pretrained(unoptimized_dir)
 
     submodels = []
     model_info = {}
 
-    if olive_safety_checker:
+    if safety_checker:
         submodels += ["safety_checker"]
-    if olive_text_encoder:
+    if text_encoder:
         submodels += ["text_encoder"]
-    if olive_unet:
+    if unet:
         submodels += ["unet"]
-    if olive_vae_decoder:
+    if vae_decoder:
         submodels += ["vae_decoder"]
-    if olive_vae_encoder:
+    if vae_encoder:
         submodels += ["vae_encoder"]
+
+    os.environ["OLIVE_CKPT_PATH"] = str(unoptimized_dir)
+    os.environ["OLIVE_SAMPLE_HEIGHT_DIM"] = str(sample_height_dim)
+    os.environ["OLIVE_SAMPLE_WIDTH_DIM"] = str(sample_width_dim)
+    os.environ["OLIVE_SAMPLE_HEIGHT"] = str(sample_height)
+    os.environ["OLIVE_SAMPLE_WIDTH"] = str(sample_width)
 
     for submodel_name in submodels:
         print(f"\nOptimizing {submodel_name}")
@@ -220,10 +213,6 @@ def optimize(model_id: str, unoptimized_dir: str, optimized_dir: str, olive_safe
             olive_config = json.load(fin)
 
         olive_config["passes"]["optimize"]["config"]["float16"] = use_fp16
-        if submodel_name in ("unet", "text_encoder"):
-            olive_config["input_model"]["config"]["model_path"] = model_id
-        else:
-            olive_config["input_model"]["config"]["model_path"] = base_model_id
 
         olive_run(olive_config)
 
@@ -450,10 +439,9 @@ class OliveOptimizedProcessingTxt2Img:
 
         for i in range(self.batch_size):
             result = self.pipeline(self,
-                [self.prompt] * self.batch_size,
-                negative_prompt=self.negative_prompt,
+                prompt=self.all_prompts,
+                negative_prompt=self.all_negative_prompts,
                 num_inference_steps=self.steps,
-                generator=torch.Generator(),
                 height=self.height,
                 width=self.width,
             )

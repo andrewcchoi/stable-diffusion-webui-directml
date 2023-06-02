@@ -35,8 +35,6 @@ import modules.hypernetworks.ui
 from modules.generation_parameters_copypaste import image_from_url_text
 import modules.extras
 
-if shared.cmd_opts.olive:
-    from modules.sd_olive import optimize, convert_to_onnx
 
 warnings.filterwarnings("default" if opts.show_warnings else "ignore", category=UserWarning)
 
@@ -1146,45 +1144,27 @@ def create_ui():
                     modelmerger_result = gr.HTML(elem_id="modelmerger_result", show_label=False)
 
     if shared.cmd_opts.olive:
+        from modules.sd_olive import optimize
         with gr.Blocks(analytics_enabled=False) as olive_interface:
             with gr.Row().style(equal_height=False):
                 with gr.Column(variant='panel'):
                     with gr.Tabs(elem_id="olive_tabs"):
-                        with gr.Tab(label="Convert checkpoint to ONNX"):
-                            olive_checkpoint_source = gr.Textbox(label='Checkpoint file name', value="", elem_id="olive_checkpoint_source")
-                            olive_onnx_output = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_onnx_output")
-
-                            button_convert_to_onnx = gr.Button(value="Convert checkpoint to ONNX", variant='primary', elem_id="olive_convert_to_onnx")
-
-            button_convert_to_onnx.click(
-                wrap_gradio_gpu_call(convert_to_onnx, extra_outputs=[""]),
-                inputs=[olive_checkpoint_source, olive_onnx_output],
-                outputs=[],
-            )
-
-            with gr.Row().style(equal_height=False):
-                with gr.Column(variant='panel'):
-                    with gr.Tabs(elem_id="olive_tabs"):
                         with gr.Tab(label="Optimize ONNX using Olive"):
-                            olive_model_id = gr.Textbox(label='Model ID', value="runwayml/stable-diffusion-v1-5", elem_id="olive_model_id", info="The huggingface identifier of the model to download and optimize.")
-                            olive_source_dir = gr.Textbox(label='Onnx model folder', value="stable-diffusion-v1-5", elem_id="olive_source_dir")
+                            olive_checkpoint = gr.Textbox(label='Checkpoint file name', value="", elem_id="olive_checkpoint", info="Your own checkpoint file name")
+                            olive_source_dir = gr.Textbox(label='ONNX model folder', value="stable-diffusion-v1-5", elem_id="olive_source_dir")
                             olive_dir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_dir")
 
-                            with gr.Column(elem_id="olive_width"):
-                                min_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Minimum width", value=512, elem_id="olive_min_width")
-                                max_width = gr.Slider(minimum=64, maximum=2048, step=64, label="Maximum width", value=512, elem_id="olive_max_width")
+                            with gr.Column(elem_id="olive_dims"):
+                                olive_sample_height_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Height Dimension", value=64, elem_id="olive_sample_height_dim")
+                                olive_sample_width_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Width Dimension", value=64, elem_id="olive_sample_width_dim")
 
-                            with gr.Column(elem_id="olive_height"):
-                                min_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Minimum height", value=512, elem_id="olive_min_height")
-                                max_height = gr.Slider(minimum=64, maximum=2048, step=64, label="Maximum height", value=512, elem_id="olive_max_height")
+                            with gr.Column(elem_id="olive_res"):
+                                olive_sample_height = gr.Slider(minimum=256, maximum=2048, step=64, label="Height", value=512, elem_id="olive_sample_height")
+                                olive_sample_width = gr.Slider(minimum=256, maximum=2048, step=64, label="Width", value=512, elem_id="olive_sample_width")
 
                             with gr.Column(elem_id="olive_batch_size"):
                                 min_bs = gr.Slider(minimum=1, maximum=16, step=1, label="Minimum batch size", value=1, elem_id="olive_min_bs")
                                 max_bs = gr.Slider(minimum=1, maximum=16, step=1, label="Maximum batch size", value=1, elem_id="olive_max_bs")
-
-                            with gr.Column(elem_id="olive_token_count"):
-                                min_token_count = gr.Slider(minimum=75, maximum=750, step=75, label="Minimum prompt token count", value=75, elem_id="olive_min_token_count")
-                                max_token_count = gr.Slider(minimum=75, maximum=750, step=75, label="Maximum prompt token count", value=75, elem_id="olive_max_token_count")
 
                             with FormGroup(elem_id="olive_submodels", elem_classes="checkboxes-row", variant="compact"):
                                 olive_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_safety_checker")
@@ -1196,11 +1176,11 @@ def create_ui():
                             with FormRow(elem_classes="checkboxes-row", variant="compact"):
                                 use_fp16 = gr.Checkbox(label='Use half floats', value=True, elem_id="olive_fp16")
 
-                            button_export_olive = gr.Button(value="Optimize ONNX model using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
+                            button_export_olive = gr.Button(value="Convert & Optimize checkpoint using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
 
             button_export_olive.click(
                 wrap_gradio_gpu_call(optimize, extra_outputs=[""]),
-                inputs=[olive_model_id, olive_source_dir, olive_dir, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16],
+                inputs=[olive_checkpoint, olive_source_dir, olive_dir, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16, olive_sample_height_dim, olive_sample_width_dim, olive_sample_height, olive_sample_width],
                 outputs=[],
             )
 

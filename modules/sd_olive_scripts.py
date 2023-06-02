@@ -2,6 +2,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 # --------------------------------------------------------------------------
+import os
 import torch
 from diffusers import AutoencoderKL, UNet2DConditionModel
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
@@ -111,10 +112,10 @@ def text_encoder_inputs(batchsize, torch_dtype):
 
 
 def text_encoder_load(model_name):
-    base_model_id = get_base_model_name(model_name)
-    model = CLIPTextModel.from_pretrained(base_model_id, subfolder="text_encoder")
-    if is_lora_model(model_name):
-        merge_lora_weights(model, model_name, "text_encoder")
+    checkpoint_path = os.environ.get("OLIVE_CKPT_PATH")
+    model = CLIPTextModel.from_pretrained(checkpoint_path, subfolder="text_encoder")
+    #if is_lora_model(checkpoint_path):
+    #    merge_lora_weights(model, checkpoint_path, "text_encoder")
     return model
 
 
@@ -133,7 +134,7 @@ def text_encoder_data_loader(data_dir, batchsize):
 
 def unet_inputs(batchsize, torch_dtype):
     return {
-        "sample": torch.rand((batchsize, 4, 64, 64), dtype=torch_dtype),
+        "sample": torch.rand((batchsize, 4, int(os.environ.get("OLIVE_SAMPLE_HEIGHT_DIM", 64)), int(os.environ.get("OLIVE_SAMPLE_WIDTH_DIM", 64))), dtype=torch_dtype),
         "timestep": torch.rand((batchsize,), dtype=torch_dtype),
         "encoder_hidden_states": torch.rand((batchsize, 77, 768), dtype=torch_dtype),
         "return_dict": False,
@@ -141,10 +142,10 @@ def unet_inputs(batchsize, torch_dtype):
 
 
 def unet_load(model_name):
-    base_model_id = get_base_model_name(model_name)
-    model = UNet2DConditionModel.from_pretrained(base_model_id, subfolder="unet")
-    if is_lora_model(model_name):
-        merge_lora_weights(model, model_name, "unet")
+    checkpoint_path = os.environ.get("OLIVE_CKPT_PATH")
+    model = UNet2DConditionModel.from_pretrained(checkpoint_path, subfolder="unet")
+    #if is_lora_model(checkpoint_path):
+    #    merge_lora_weights(model, checkpoint_path, "unet")
     return model
 
 
@@ -163,14 +164,13 @@ def unet_data_loader(data_dir, batchsize):
 
 def vae_encoder_inputs(batchsize, torch_dtype):
     return {
-        "sample": torch.rand((batchsize, 3, 512, 512), dtype=torch_dtype),
+        "sample": torch.rand((batchsize, 3, int(os.environ.get("OLIVE_SAMPLE_HEIGHT", 512)), int(os.environ.get("OLIVE_SAMPLE_WIDTH", 512))), dtype=torch_dtype),
         "return_dict": False,
     }
 
 
 def vae_encoder_load(model_name):
-    base_model_id = get_base_model_name(model_name)
-    model = AutoencoderKL.from_pretrained(base_model_id, subfolder="vae")
+    model = AutoencoderKL.from_pretrained(os.environ.get("OLIVE_CKPT_PATH"), subfolder="vae")
     model.forward = lambda sample, return_dict: model.encode(sample, return_dict)[0].sample()
     return model
 
@@ -190,14 +190,13 @@ def vae_encoder_data_loader(data_dir, batchsize):
 
 def vae_decoder_inputs(batchsize, torch_dtype):
     return {
-        "latent_sample": torch.rand((batchsize, 4, 64, 64), dtype=torch_dtype),
+        "latent_sample": torch.rand((batchsize, 4, int(os.environ.get("OLIVE_SAMPLE_HEIGHT_DIM", 64)), int(os.environ.get("OLIVE_SAMPLE_WIDTH_DIM", 64))), dtype=torch_dtype),
         "return_dict": False,
     }
 
 
 def vae_decoder_load(model_name):
-    base_model_id = get_base_model_name(model_name)
-    model = AutoencoderKL.from_pretrained(base_model_id, subfolder="vae")
+    model = AutoencoderKL.from_pretrained(os.environ.get("OLIVE_CKPT_PATH"), subfolder="vae")
     model.forward = model.decode
     return model
 
@@ -218,13 +217,12 @@ def vae_decoder_data_loader(data_dir, batchsize):
 def safety_checker_inputs(batchsize, torch_dtype):
     return {
         "clip_input": torch.rand((batchsize, 3, 224, 224), dtype=torch_dtype),
-        "images": torch.rand((batchsize, 512, 512, 3), dtype=torch_dtype),
+        "images": torch.rand((batchsize, int(os.environ.get("OLIVE_SAMPLE_HEIGHT", 512)), int(os.environ.get("OLIVE_SAMPLE_WIDTH", 512)), 3), dtype=torch_dtype),
     }
 
 
 def safety_checker_load(model_name):
-    base_model_id = get_base_model_name(model_name)
-    model = StableDiffusionSafetyChecker.from_pretrained(base_model_id, subfolder="safety_checker")
+    model = StableDiffusionSafetyChecker.from_pretrained(os.environ.get("OLIVE_CKPT_PATH"), subfolder="safety_checker")
     model.forward = model.forward_onnx
     return model
 
