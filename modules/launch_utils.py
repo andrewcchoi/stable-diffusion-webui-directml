@@ -221,9 +221,24 @@ def run_extensions_installers(settings_file):
 
 def prepare_environment():
     torch_index_url = os.environ.get('TORCH_INDEX_URL', "https://download.pytorch.org/whl/cu118")
-    torch_command = os.environ.get('TORCH_COMMAND', f"pip install torch==2.0.1 torchvision==0.15.2 --extra-index-url {torch_index_url}")
-    if shutil.which('nvidia-smi') is None and shutil.which('rocminfo') is None:
+    if args.backend == 'auto':
+        nvidia_driver_found = shutil.which('nvidia-smi') is not None
+        rocm_found = shutil.which('rocminfo') is not None
+        if nvidia_driver_found:
+            args.backend = 'cuda'
+            print("NVIDIA driver was found. Automatically changed backend to 'cuda'. You can manually select which backend will be used through '--backend' argument.")
+        elif rocm_found:
+            args.backend = 'rocm'
+            print("ROCm was found. Automatically changed backend to 'rocm'. You can manually select which backend will be used through '--backend' argument.")
+        else:
+            args.backend = 'directml'
+    if args.backend == 'cuda':
+        torch_command = os.environ.get('TORCH_COMMAND', f"pip install torch==2.0.1 torchvision==0.15.2 --extra-index-url {torch_index_url}")
+    if args.backend == 'rocm':
+        torch_command = os.environ.get('TORCH_COMMAND', "pip install torch==2.0.1 torchvision==0.15.2 --extra-index-url https://download.pytorch.org/whl/rocm5.4.2")
+    if args.backend == 'directml':
         torch_command = os.environ.get('TORCH_COMMAND', "pip install torch==2.0.0 torchvision==0.15.1 torch-directml")
+    
     requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
 
     xformers_package = os.environ.get('XFORMERS_PACKAGE', 'xformers==0.0.17')

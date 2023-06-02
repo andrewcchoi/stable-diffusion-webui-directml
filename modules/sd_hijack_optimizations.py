@@ -5,7 +5,6 @@ import traceback
 import psutil
 
 import torch
-import torch_directml
 from torch import einsum
 
 from ldm.util import default

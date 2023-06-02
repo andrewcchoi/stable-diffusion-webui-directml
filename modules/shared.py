@@ -90,7 +90,7 @@ hypernetworks = {}
 loaded_hypernetworks = []
 
 
-if device.type == 'privateuseone':
+if cmd_opts.backend == 'directml':
     import modules.dml
 
 
