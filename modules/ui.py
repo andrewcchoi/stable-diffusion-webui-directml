@@ -1151,15 +1151,14 @@ def create_ui():
                 with gr.Column(variant='panel'):
                     with gr.Tabs(elem_id="olive_tabs"):
                         with gr.Tab(label="Convert checkpoint to ONNX"):
-                            olive_model_name = gr.Dropdown(modules.sd_models.checkpoint_tiles(), elem_id="olive_model_name", label="Checkpoint file")
-                            create_refresh_button(primary_model_name, modules.sd_models.list_models, lambda: {"choices": modules.sd_models.checkpoint_tiles()}, "olive_refresh_checkpoint")
-                            olive_onnx_output = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_dir")
+                            olive_checkpoint_source = gr.Textbox(label='Checkpoint file name', value="", elem_id="olive_checkpoint_source")
+                            olive_onnx_output = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_onnx_output")
 
                             button_convert_to_onnx = gr.Button(value="Convert checkpoint to ONNX", variant='primary', elem_id="olive_convert_to_onnx")
 
             button_convert_to_onnx.click(
                 wrap_gradio_gpu_call(convert_to_onnx, extra_outputs=[""]),
-                inputs=[olive_model_name, olive_onnx_output],
+                inputs=[olive_checkpoint_source, olive_onnx_output],
                 outputs=[],
             )
 
