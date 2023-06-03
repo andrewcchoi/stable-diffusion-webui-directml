@@ -447,17 +447,17 @@ def load_model(checkpoint_info=None, already_loaded_state_dict=None):
     from modules import lowvram, sd_hijack
     checkpoint_info = checkpoint_info or select_checkpoint()
 
-    if model_data.sd_model:
-        sd_hijack.model_hijack.undo_hijack(model_data.sd_model)
-        model_data.sd_model = None
-        gc.collect()
-        devices.torch_gc()
-
     if shared.cmd_opts.olive:
         from modules.sd_olive import OliveOptimizedModel
         model_data.set_sd_model(OliveOptimizedModel(checkpoint_info.name))
         print(f"Model {model_data.sd_model.path} loaded.")
         return model_data.sd_model
+
+    if model_data.sd_model:
+        sd_hijack.model_hijack.undo_hijack(model_data.sd_model)
+        model_data.sd_model = None
+        gc.collect()
+        devices.torch_gc()
 
     do_inpainting_hijack()
 
@@ -533,8 +533,8 @@ def reload_model_weights(sd_model=None, info=None):
         sd_model = model_data.sd_model
 
     if shared.cmd_opts.olive:
-        model_data.set_sd_model(sd_model)
-        return sd_model
+        load_model(checkpoint_info)
+        return model_data.sd_model
 
     if sd_model is None:  # previous model load failed
         current_checkpoint_info = None

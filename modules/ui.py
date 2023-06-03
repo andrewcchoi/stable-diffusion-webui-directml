@@ -1144,43 +1144,78 @@ def create_ui():
                     modelmerger_result = gr.HTML(elem_id="modelmerger_result", show_label=False)
 
     if shared.cmd_opts.olive:
-        from modules.sd_olive import optimize
+        from modules.sd_olive import optimize_from_ckpt, optimize_from_onnx
         with gr.Blocks(analytics_enabled=False) as olive_interface:
             with gr.Row().style(equal_height=False):
                 with gr.Column(variant='panel'):
                     with gr.Tabs(elem_id="olive_tabs"):
-                        with gr.Tab(label="Optimize ONNX using Olive"):
+                        with gr.Tab(label="Optimize checkpoint"):
                             olive_checkpoint = gr.Textbox(label='Checkpoint file name', value="", elem_id="olive_checkpoint", info="Your own checkpoint file name")
-                            olive_source_dir = gr.Textbox(label='ONNX model folder', value="stable-diffusion-v1-5", elem_id="olive_source_dir")
-                            olive_dir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_dir")
+                            olive_ckpt_source_dir = gr.Textbox(label='ONNX model folder', value="stable-diffusion-v1-5", elem_id="olive_ckpt_source_dir")
+                            olive_ckpt_outdir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_ckpt_outdir")
 
-                            with gr.Column(elem_id="olive_dims"):
-                                olive_sample_height_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Height Dimension", value=64, elem_id="olive_sample_height_dim")
-                                olive_sample_width_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Width Dimension", value=64, elem_id="olive_sample_width_dim")
+                            with gr.Column(elem_id="olive_ckpt_dims"):
+                                olive_ckpt_sample_height_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Height Dimension", value=64, elem_id="olive_ckpt_sample_height_dim")
+                                olive_ckpt_sample_width_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Width Dimension", value=64, elem_id="olive_ckpt_sample_width_dim")
 
-                            with gr.Column(elem_id="olive_res"):
-                                olive_sample_height = gr.Slider(minimum=256, maximum=2048, step=64, label="Height", value=512, elem_id="olive_sample_height")
-                                olive_sample_width = gr.Slider(minimum=256, maximum=2048, step=64, label="Width", value=512, elem_id="olive_sample_width")
+                            with gr.Column(elem_id="olive_ckpt_res"):
+                                olive_ckpt_sample_height = gr.Slider(minimum=256, maximum=2048, step=64, label="Height", value=512, elem_id="olive_ckpt_sample_height")
+                                olive_ckpt_sample_width = gr.Slider(minimum=256, maximum=2048, step=64, label="Width", value=512, elem_id="olive_ckpt_sample_width")
 
-                            with gr.Column(elem_id="olive_batch_size"):
-                                min_bs = gr.Slider(minimum=1, maximum=16, step=1, label="Minimum batch size", value=1, elem_id="olive_min_bs")
-                                max_bs = gr.Slider(minimum=1, maximum=16, step=1, label="Maximum batch size", value=1, elem_id="olive_max_bs")
-
-                            with FormGroup(elem_id="olive_submodels", elem_classes="checkboxes-row", variant="compact"):
-                                olive_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_safety_checker")
-                                olive_text_encoder = gr.Checkbox(label='Text Encoder', value=True, elem_id="olive_text_encoder")
-                                olive_unet = gr.Checkbox(label='UNet', value=True, elem_id="olive_unet")
-                                olive_vae_decoder = gr.Checkbox(label='VAE Decoder', value=True, elem_id="olive_vae_decoder")
-                                olive_vae_encoder = gr.Checkbox(label='VAE Encoder', value=True, elem_id="olive_vae_encoder")
+                            with FormRow(elem_id="olive_ckpt_submodels", elem_classes="checkboxes-row", variant="compact"):
+                                olive_ckpt_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_ckpt_safety_checker")
+                                olive_ckpt_text_encoder = gr.Checkbox(label='Text Encoder', value=True, elem_id="olive_ckpt_text_encoder")
+                                olive_ckpt_unet = gr.Checkbox(label='UNet', value=True, elem_id="olive_ckpt_unet")
+                                olive_ckpt_vae_decoder = gr.Checkbox(label='VAE Decoder', value=True, elem_id="olive_ckpt_vae_decoder")
+                                olive_ckpt_vae_encoder = gr.Checkbox(label='VAE Encoder', value=True, elem_id="olive_ckpt_vae_encoder")
 
                             with FormRow(elem_classes="checkboxes-row", variant="compact"):
-                                use_fp16 = gr.Checkbox(label='Use half floats', value=True, elem_id="olive_fp16")
+                                olive_ckpt_use_fp16 = gr.Checkbox(label='Use half floats', value=True, elem_id="olive_ckpt_use_fp16")
 
-                            button_export_olive = gr.Button(value="Convert & Optimize checkpoint using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
+                            button_olive_from_ckpt = gr.Button(value="Convert & Optimize checkpoint using Olive", variant='primary', elem_id="olive_optimize_from_ckpt")
 
-            button_export_olive.click(
-                wrap_gradio_gpu_call(optimize, extra_outputs=[""]),
-                inputs=[olive_checkpoint, olive_source_dir, olive_dir, olive_safety_checker, olive_text_encoder, olive_unet, olive_vae_decoder, olive_vae_encoder, use_fp16, olive_sample_height_dim, olive_sample_width_dim, olive_sample_height, olive_sample_width],
+                        with gr.Tab(label="Optimize ONNX model"):
+                            olive_onnx_model_id = gr.Textbox(label='ONNX Model ID', value="stable-diffusion-v1-5", elem_id="olive_onnx_model_id")
+                            olive_onnx_indir = gr.Textbox(label='Input folder', value="stable-diffusion-v1-5", elem_id="olive_onnx_indir", info="If this folder exists, Olive will load and optimize model from it. Otherwise, download and optimize model on it.")
+                            olive_onnx_outdir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_onnx_outdir")
+
+                            with gr.Column(elem_id="olive_onnx_dims"):
+                                olive_onnx_sample_height_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Height Dimension", value=64, elem_id="olive_onnx_sample_height_dim")
+                                olive_onnx_sample_width_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Width Dimension", value=64, elem_id="olive_onnx_sample_width_dim")
+
+                            with gr.Column(elem_id="olive_onnx_res"):
+                                olive_onnx_sample_height = gr.Slider(minimum=256, maximum=2048, step=64, label="Height", value=512, elem_id="olive_onnx_sample_height")
+                                olive_onnx_sample_width = gr.Slider(minimum=256, maximum=2048, step=64, label="Width", value=512, elem_id="olive_onnx_sample_width")
+
+                            with FormRow(elem_id="olive_onnx_submodels", elem_classes="checkboxes-row", variant="compact"):
+                                olive_onnx_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_onnx_safety_checker")
+                                olive_onnx_text_encoder = gr.Checkbox(label='Text Encoder', value=True, elem_id="olive_onnx_text_encoder")
+                                olive_onnx_unet = gr.Checkbox(label='UNet', value=True, elem_id="olive_onnx_unet")
+                                olive_onnx_vae_decoder = gr.Checkbox(label='VAE Decoder', value=True, elem_id="olive_onnx_vae_decoder")
+                                olive_onnx_vae_encoder = gr.Checkbox(label='VAE Encoder', value=True, elem_id="olive_onnx_vae_encoder")
+
+                            with FormRow(elem_classes="checkboxes-row", variant="compact"):
+                                olive_onnx_use_fp16 = gr.Checkbox(label='Use half floats', value=True, elem_id="olive_onnx_use_fp16")
+
+                            button_olive_from_onnx = gr.Button(value="Download & Optimize ONNX model using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
+
+            button_olive_from_ckpt.click(
+                wrap_gradio_gpu_call(optimize_from_ckpt, extra_outputs=[""]),
+                inputs=[olive_checkpoint, olive_ckpt_source_dir, olive_ckpt_outdir,
+                    olive_ckpt_safety_checker, olive_ckpt_text_encoder, olive_ckpt_unet, olive_ckpt_vae_decoder, olive_ckpt_vae_encoder,
+                    olive_ckpt_use_fp16,
+                    olive_ckpt_sample_height_dim, olive_ckpt_sample_width_dim, olive_ckpt_sample_height, olive_ckpt_sample_width
+                ],
+                outputs=[],
+            )
+
+            button_olive_from_onnx.click(
+                wrap_gradio_gpu_call(optimize_from_onnx, extra_outputs=[""]),
+                inputs=[olive_onnx_model_id, olive_onnx_indir, olive_onnx_outdir,
+                    olive_onnx_safety_checker, olive_onnx_text_encoder, olive_onnx_unet, olive_onnx_vae_decoder, olive_onnx_vae_encoder,
+                    olive_onnx_use_fp16,
+                    olive_onnx_sample_height_dim, olive_onnx_sample_width_dim, olive_onnx_sample_height, olive_onnx_sample_width
+                ],
                 outputs=[],
             )
 
