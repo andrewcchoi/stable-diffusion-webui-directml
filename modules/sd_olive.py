@@ -220,7 +220,8 @@ def optimize(unoptimized_dir: Path, optimized_dir: Path, pipeline, safety_checke
     for submodel_name in submodels:
         print(f"\nOptimizing {submodel_name}")
 
-        olive_config = json.load(open(Path(sd_configs_path) / "olive_optimize" / f"config_{submodel_name}.json", "r"))
+        with open(Path(sd_configs_path) / "olive_optimize" / f"config_{submodel_name}.json", "r") as olive_config_raw:
+            olive_config = json.load(olive_config_raw)
         olive_config["passes"]["optimize"]["config"]["float16"] = use_fp16
 
         olive_run(olive_config)
