@@ -36,7 +36,7 @@ def __call__(
     return_dict: bool = True,
     callback = None,
     callback_steps: int = 1,
-    scheduler = None,
+    seed: int = -1,
 ):
     # check inputs. Raise error if not correct
     self.check_inputs(
@@ -72,6 +72,8 @@ def __call__(
     latents_dtype = prompt_embeds.dtype
     latents_shape = (batch_size * num_images_per_prompt, 4, height // 8, width // 8)
     if latents is None:
+        if seed != -1:
+            generator.seed(int(seed))
         latents = generator.randn(*latents_shape).astype(latents_dtype)
     elif latents.shape != latents_shape:
         raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {latents_shape}")
@@ -96,9 +98,6 @@ def __call__(
     timestep_dtype = ORT_TO_NP_TYPE[timestep_dtype]
 
     for i, t in enumerate(self.progress_bar(self.scheduler.timesteps)):
-        if shared.state.job_count == -1:
-            shared.state.job_count = p.n_iter
-
         if shared.state.skipped:
             shared.state.skipped = False
 
@@ -132,6 +131,8 @@ def __call__(
         # call the callback, if provided
         if callback is not None and i % callback_steps == 0:
             callback(i, t, latents)
+
+        shared.state.nextjob()
 
     latents = 1 / 0.18215 * latents
     # image = self.vae_decoder(latent_sample=latents)[0]
@@ -286,12 +287,13 @@ def optimize(unoptimized_dir: Path, optimized_dir: Path, pipeline, vae_id: str, 
         except:
             pass
 
-    json.dump({
-        "sample_height_dim": sample_height_dim,
-        "sample_width_dim": sample_width_dim,
-        "sample_height": sample_height,
-        "sample_width": sample_width,
-    }, open(optimized_dir / "opt_config.json", "w"))
+    with open(optimized_dir / "opt_config.json", "w") as opt_config:
+        json.dump({
+            "sample_height_dim": sample_height_dim,
+            "sample_width_dim": sample_width_dim,
+            "sample_height": sample_height,
+            "sample_width": sample_width,
+        }, opt_config)
 
     shared.refresh_checkpoints()
     print(f"Optimization complete.")
@@ -385,12 +387,12 @@ class OliveOptimizedProcessingTxt2Img:
         if type(prompt) == list:
             self.all_prompts = self.prompt
         else:
-            self.all_prompts = self.batch_size * self.n_iter * [self.prompt]
+            self.all_prompts = self.batch_size * [self.prompt]
 
         if type(self.negative_prompt) == list:
             self.all_negative_prompts = self.negative_prompt
         else:
-            self.all_negative_prompts = self.batch_size * self.n_iter * [self.negative_prompt]
+            self.all_negative_prompts = self.batch_size * [self.negative_prompt]
 
         self.all_prompts = [shared.prompt_styles.apply_styles_to_prompt(x, self.styles) for x in self.all_prompts]
         self.all_negative_prompts = [shared.prompt_styles.apply_negative_styles_to_prompt(x, self.styles) for x in self.all_negative_prompts]
@@ -465,9 +467,12 @@ class OliveOptimizedProcessingTxt2Img:
         else:
             self.all_subseeds = [int(subseed) + x for x in range(len(self.all_prompts))]
 
+        if shared.state.job_count == -1:
+            shared.state.job_count = self.n_iter * self.steps
+
         output_images = []
 
-        for i in range(self.batch_size):
+        for i in range(0, self.n_iter):
             result = self.pipeline(self,
                 prompt=self.all_prompts,
                 negative_prompt=self.all_negative_prompts,
@@ -475,18 +480,20 @@ class OliveOptimizedProcessingTxt2Img:
                 height=self.height,
                 width=self.width,
                 #eta=self.eta,
+                seed=seed,
             )
+            seed += 1
             image = result.images[0]
             images.save_image(image, self.outpath_samples, "")
             output_images.append(image)
 
             devices.torch_gc()
-            shared.state.nextjob()
+            del result
 
         index_of_first_image = 0
         unwanted_grid_because_of_img_count = len(output_images) < 2 and shared.opts.grid_only_if_multiple
         if (shared.opts.return_grid or shared.opts.grid_save) and not unwanted_grid_because_of_img_count:
-            grid = images.image_grid(output_images, self.batch_size)
+            grid = images.image_grid(output_images, self.n_iter)
 
             if shared.opts.return_grid:
                 output_images.insert(0, grid)
