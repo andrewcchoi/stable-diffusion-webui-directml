@@ -1204,12 +1204,20 @@ def create_ui():
 
                             button_olive_from_onnx = gr.Button(value="Download & Optimize ONNX model using Olive", variant='primary', elem_id="olive_optimize_from_onnx")
 
+                        with gr.Tab(label="Merge Extra Networks"):
+                            olive_merge_lora = gr.Checkbox(label='Merge LoRA', value=False, elem_id="olive_merge_lora")
+
+                            olive_merge_lora_inputs = []
+                            for i in range(0, 3):
+                                olive_merge_lora_inputs.append(gr.Textbox(label=f'LoRA File Name {i}', value="", elem_id=f"olive_merge_lora{i}"))
+
             button_olive_from_ckpt.click(
                 wrap_gradio_gpu_call(optimize_from_ckpt, extra_outputs=[""]),
                 inputs=[olive_checkpoint, olive_ckpt_vae, olive_ckpt_vae_subfolder, olive_ckpt_source_dir, olive_ckpt_outdir,
                     olive_ckpt_safety_checker, olive_ckpt_text_encoder, olive_ckpt_unet, olive_ckpt_vae_decoder, olive_ckpt_vae_encoder,
                     olive_ckpt_sampling_method, olive_ckpt_use_fp16,
-                    olive_ckpt_sample_height_dim, olive_ckpt_sample_width_dim, olive_ckpt_sample_height, olive_ckpt_sample_width
+                    olive_ckpt_sample_height_dim, olive_ckpt_sample_width_dim, olive_ckpt_sample_height, olive_ckpt_sample_width,
+                    olive_merge_lora, *olive_merge_lora_inputs,
                 ],
                 outputs=[],
             )
@@ -1219,7 +1227,8 @@ def create_ui():
                 inputs=[olive_onnx_model_id, olive_onnx_vae, olive_onnx_vae_subfolder, olive_onnx_indir, olive_onnx_outdir,
                     olive_onnx_safety_checker, olive_onnx_text_encoder, olive_onnx_unet, olive_onnx_vae_decoder, olive_onnx_vae_encoder,
                     olive_onnx_use_fp16,
-                    olive_onnx_sample_height_dim, olive_onnx_sample_width_dim, olive_onnx_sample_height, olive_onnx_sample_width
+                    olive_onnx_sample_height_dim, olive_onnx_sample_width_dim, olive_onnx_sample_height, olive_onnx_sample_width,
+                    olive_merge_lora, *olive_merge_lora_inputs,
                 ],
                 outputs=[],
             )

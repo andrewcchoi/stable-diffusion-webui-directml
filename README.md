@@ -186,4 +186,5 @@ Licenses for borrowed code can be found in `Settings -> Licenses` screen, and al
 - TAESD - Ollin Boer Bohan - https://github.com/madebyollin/taesd
 - Initial Gradio script - posted on 4chan by an Anonymous user. Thank you Anonymous user.
 - Olive - https://github.com/microsoft/Olive
+- kohya-ss/sd-scripts - https://github.com/kohya-ss/sd-scripts
 - (You)
