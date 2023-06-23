@@ -213,8 +213,8 @@ def configure_sigint_handler():
     # make the program just exit at ctrl+c without waiting for anything
     def sigint_handler(sig, frame):
         print(f'Interrupted with signal {sig} in {frame}')
-        os._exit(0)
-
+        # os._exit(0)
+        sys.exit(0)
     if not os.environ.get("COVERAGE_RUN"):
         # Don't install the immediate-quit handler when running under coverage,
         # as then the coverage report won't be generated.
@@ -234,7 +234,7 @@ def configure_opts_onchange():
 def initialize():
     fix_asyncio_event_loop_policy()
     validate_tls_options()
-    configure_sigint_handler()
+    # configure_sigint_handler()
     check_versions()
     modelloader.cleanup_models()
     configure_opts_onchange()
