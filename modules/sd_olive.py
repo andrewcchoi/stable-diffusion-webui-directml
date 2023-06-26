@@ -13,7 +13,7 @@ from diffusers.pipelines.onnx_utils import ORT_TO_NP_TYPE
 from olive.model import ONNXModel
 from olive.workflows import run as olive_run
 
-from modules import shared, images, devices, sd_vae
+from modules import shared, images, devices
 from modules.paths_internal import sd_configs_path, models_path
 from modules.processing import Processed, get_fixed_seed
 
@@ -315,6 +315,33 @@ class OliveOptimizedModel:
         self.cond_stage_key = ""
 
 class OliveOptimizedProcessingTxt2Img:
+    sd_model: OliveOptimizedModel
+    outpath_samples: str
+    outpath_grids: str
+    prompt: str
+    prompt_for_display: str | None = None
+    negative_prompt: str
+    styles: list
+    seed: int
+    subseed: int
+    subseed_strength: float
+    seed_resize_from_h: int
+    seed_resize_from_w: int
+    sampler_name: str
+    batch_size: int
+    n_iter: int
+    steps: int
+    cfg_scale: float
+    width: int
+    height: int
+    restore_faces: bool
+    tiling: bool
+    do_not_save_samples: bool
+    do_not_save_grid: bool
+    extra_generation_params: dict
+
+    opt_config: dict
+    sess_options: ort.SessionOptions
     def __init__(self, sd_model=None, outpath_samples=None, outpath_grids=None, prompt: str = "", styles = None, seed: int = -1, subseed: int = -1, subseed_strength: float = 0, seed_resize_from_h: int = -1, seed_resize_from_w: int = -1, seed_enable_extras: bool = True, sampler_name: str = None, batch_size: int = 1, n_iter: int = 1, steps: int = 50, cfg_scale: float = 7.0, width: int = 512, height: int = 512, restore_faces: bool = False, tiling: bool = False, do_not_save_samples: bool = False, do_not_save_grid: bool = False, extra_generation_params = None, overlay_images = None, negative_prompt: str = None, eta: float = None, do_not_reload_embeddings: bool = False, ddim_discretize: str = None, s_min_uncond: float = 0.0, s_churn: float = 0.0, s_tmax: float = None, s_tmin: float = 0.0, s_noise: float = 1.0, override_settings = None, override_settings_restore_afterwards: bool = True, sampler_index: int = None, script_args: list = None, enable_hr: bool = False, denoising_strength: float = 0.75, firstphase_width: int = 0, firstphase_height: int = 0, hr_scale: float = 2.0, hr_upscaler: str = None, hr_second_pass_steps: int = 0, hr_resize_x: int = 0, hr_resize_y: int = 0, hr_sampler_name: str = None, hr_prompt: str = '', hr_negative_prompt: str = ''):
         self.sd_model: OliveOptimizedModel = sd_model
         self.outpath_samples: str = outpath_samples
@@ -446,7 +473,9 @@ class OliveOptimizedProcessingTxt2Img:
         self.sess_options.add_free_dimension_override_by_name("unet_hidden_batch", self.batch_size * 2)
         self.sess_options.add_free_dimension_override_by_name("unet_hidden_sequence", 77)
         self.pipeline = OnnxStableDiffusionPipeline.from_pretrained(
-            self.sd_model.path, provider="DmlExecutionProvider", sess_options=self.sess_options
+            self.sd_model.path, provider=("DmlExecutionProvider", {
+                "device_id": shared.cmd_opts.device_id,
+            }), sess_options=self.sess_options, local_files_only=True
         )
 
     def process(self) -> Processed:
