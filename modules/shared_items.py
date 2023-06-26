@@ -40,3 +40,30 @@ def refresh_unet_list():
 
     modules.sd_unet.list_unets()
 
+
+ui_reorder_categories_builtin_items = [
+    "inpaint",
+    "sampler",
+    "checkboxes",
+    "hires_fix",
+    "dimensions",
+    "cfg",
+    "seed",
+    "batch",
+    "override_settings",
+]
+
+
+def ui_reorder_categories():
+    from modules import scripts
+
+    yield from ui_reorder_categories_builtin_items
+
+    sections = {}
+    for script in scripts.scripts_txt2img.scripts + scripts.scripts_img2img.scripts:
+        if isinstance(script.section, str):
+            sections[script.section] = 1
+
+    yield from sections
+
+    yield "scripts"

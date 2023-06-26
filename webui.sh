@@ -112,9 +112,24 @@ then
 fi
 
 # Check prerequisites
-gpu_info=$(lspci 2>/dev/null | grep VGA)
+gpu_info=$(lspci 2>/dev/null | grep -E "VGA|Display")
 case "$gpu_info" in
-    *"Navi 1"*|*"Navi 2"*) export HSA_OVERRIDE_GFX_VERSION=10.3.0
+    *"Navi 1"*)
+        export HSA_OVERRIDE_GFX_VERSION=10.3.0
+        if [[ -z "${TORCH_COMMAND}" ]]
+        then
+            pyv="$(${python_cmd} -c 'import sys; print(".".join(map(str, sys.version_info[0:2])))')"
+            if [[ $(bc <<< "$pyv <= 3.10") -eq 1 ]] 
+            then
+                # Navi users will still use torch 1.13 because 2.0 does not seem to work.
+                export TORCH_COMMAND="pip install torch==1.13.1+rocm5.2 torchvision==0.14.1+rocm5.2 --index-url https://download.pytorch.org/whl/rocm5.2"
+            else
+                printf "\e[1m\e[31mERROR: RX 5000 series GPUs must be using at max python 3.10, aborting...\e[0m"
+                exit 1
+            fi
+        fi
+    ;;
+    *"Navi 2"*) export HSA_OVERRIDE_GFX_VERSION=10.3.0
     ;;
     *"Renoir"*) export HSA_OVERRIDE_GFX_VERSION=9.0.0
         printf "\n%s\n" "${delimiter}"
@@ -203,17 +218,24 @@ prepare_tcmalloc() {
     fi
 }
 
-if [[ ! -z "${ACCELERATE}" ]] && [ ${ACCELERATE}="True" ] && [ -x "$(command -v accelerate)" ]
-then
-    printf "\n%s\n" "${delimiter}"
-    printf "Accelerating launch.py..."
-    printf "\n%s\n" "${delimiter}"
-    prepare_tcmalloc
-    exec accelerate launch --num_cpu_threads_per_process=6 "${LAUNCH_SCRIPT}" "$@"
-else
-    printf "\n%s\n" "${delimiter}"
-    printf "Launching launch.py..."
-    printf "\n%s\n" "${delimiter}"
-    prepare_tcmalloc
-    exec "${python_cmd}" "${LAUNCH_SCRIPT}" "$@"
-fi
+KEEP_GOING=1
+export SD_WEBUI_RESTART=tmp/restart
+while [[ "$KEEP_GOING" -eq "1" ]]; do
+    if [[ ! -z "${ACCELERATE}" ]] && [ ${ACCELERATE}="True" ] && [ -x "$(command -v accelerate)" ]; then
+        printf "\n%s\n" "${delimiter}"
+        printf "Accelerating launch.py..."
+        printf "\n%s\n" "${delimiter}"
+        prepare_tcmalloc
+        accelerate launch --num_cpu_threads_per_process=6 "${LAUNCH_SCRIPT}" "$@"
+    else
+        printf "\n%s\n" "${delimiter}"
+        printf "Launching launch.py..."
+        printf "\n%s\n" "${delimiter}"
+        prepare_tcmalloc
+        "${python_cmd}" "${LAUNCH_SCRIPT}" "$@"
+    fi
+
+    if [[ ! -f tmp/restart ]]; then
+        KEEP_GOING=0
+    fi
+done
