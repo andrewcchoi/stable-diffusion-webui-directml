@@ -3,7 +3,6 @@ import contextlib
 from functools import lru_cache
 
 import torch
-import torch_directml
 from modules import errors
 from modules.sd_hijack_utils import CondFunc
 from packaging import version
@@ -52,8 +51,11 @@ def get_optimal_device_name():
     if has_mps():
         return "mps"
 
-    if torch_directml.is_available():
-        return get_dml_device_string()
+    from modules import shared
+    if shared.cmd_opts.backend == 'directml':
+        import torch_directml
+        if torch_directml.is_available():
+            return get_dml_device_string()
 
     return "cpu"
 
