@@ -472,10 +472,11 @@ class OliveOptimizedProcessingTxt2Img:
         self.sess_options.add_free_dimension_override_by_name("unet_time_batch", 1)
         self.sess_options.add_free_dimension_override_by_name("unet_hidden_batch", self.batch_size * 2)
         self.sess_options.add_free_dimension_override_by_name("unet_hidden_sequence", 77)
+        provider_options = dict()
+        if shared.cmd_opts.device_id:
+            provider_options["device_id"] = shared.cmd_opts.device_id
         self.pipeline = OnnxStableDiffusionPipeline.from_pretrained(
-            self.sd_model.path, provider=("DmlExecutionProvider", {
-                "device_id": shared.cmd_opts.device_id,
-            }), sess_options=self.sess_options, local_files_only=True
+            self.sd_model.path, provider=("DmlExecutionProvider", provider_options), sess_options=self.sess_options, local_files_only=True
         )
 
     def process(self) -> Processed:
