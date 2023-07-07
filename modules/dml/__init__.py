@@ -9,6 +9,7 @@ from .optimizer.unknown import UnknownOptimizer
 class DirectML():
     _is_autocast_enabled = False
     _autocast_dtype = torch.float16
+
     def get_optimizer(device: torch.device):
         assert device.type == 'privateuseone'
         try:
@@ -22,7 +23,7 @@ class DirectML():
             else:
                 return UnknownOptimizer
             return optimizer
-        except:
+        except Exception:
             return UnknownOptimizer
 
     def memory_stats(device: torch.device):
