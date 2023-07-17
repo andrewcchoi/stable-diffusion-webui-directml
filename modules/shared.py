@@ -61,6 +61,8 @@ gradio_hf_hub_themes = [
 
 
 cmd_opts.disable_extension_access = (cmd_opts.share or cmd_opts.listen or cmd_opts.server_name) and not cmd_opts.enable_insecure_extension_access
+if cmd_opts.olive:
+    cmd_opts.onnx = True
 
 
 devices.device, devices.device_interrogate, devices.device_gfpgan, devices.device_esrgan, devices.device_codeformer = \
