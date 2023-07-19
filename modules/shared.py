@@ -428,6 +428,7 @@ options_templates.update(options_section(('onnx', "ONNX Runtime"), {
     "enable_mem_pattern": OptionInfo(True, "Enable the memory pattern optimization."),
     "enable_mem_reuse": OptionInfo(True, "Enable the memory reuse optimization."),
     "reload_model_before_each_generation": OptionInfo(False, "Reload model before each generation."),
+    "offload_state_dict": OptionInfo(False, "Offload state dict."),
 }))
 
 options_templates.update(options_section(('optimizations', "Optimizations"), {

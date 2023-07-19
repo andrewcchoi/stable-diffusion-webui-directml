@@ -188,7 +188,8 @@ class SdONNXModel:
         self.sess_options.add_free_dimension_override_by_name("unet_hidden_sequence", 77)
     
     def to(self, *args, **kwargs) -> diffusers.OnnxStableDiffusionPipeline:
-        return self.pipeline.to(*args, **kwargs)
+        if self.__pipeline is not None:
+            return self.__pipeline.to(*args, **kwargs)
 
     def __create_pipeline(self, sampler: SamplerData) -> diffusers.OnnxStableDiffusionPipeline:
         provider_options = dict()
@@ -201,6 +202,7 @@ class SdONNXModel:
             sess_options=self.sess_options,
             local_files_only=True,
             torch_dtype=devices.dtype,
+            offload_state_dict=shared.opts.offload_state_dict,
         )
 
     def create_pipeline(self, sampler: SamplerData) -> diffusers.OnnxStableDiffusionPipeline:

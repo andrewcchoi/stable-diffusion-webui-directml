@@ -2,3 +2,4 @@ transformers
 accelerate
 diffusers
 onnx
+invisible-watermark

@@ -1147,6 +1147,7 @@ def create_ui():
                             with FormRow(elem_id="olive_ckpt_submodels", elem_classes="checkboxes-row", variant="compact"):
                                 olive_ckpt_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_ckpt_safety_checker")
                                 olive_ckpt_text_encoder = gr.Checkbox(label='Text Encoder', value=True, elem_id="olive_ckpt_text_encoder")
+                                olive_ckpt_text_encoder_2 = gr.Checkbox(label='Text Encoder 2', value=False, elem_id="olive_ckpt_text_encoder_2")
                                 olive_ckpt_unet = gr.Checkbox(label='UNet', value=True, elem_id="olive_ckpt_unet")
                                 olive_ckpt_vae_decoder = gr.Checkbox(label='VAE Decoder', value=True, elem_id="olive_ckpt_vae_decoder")
                                 olive_ckpt_vae_encoder = gr.Checkbox(label='VAE Encoder', value=True, elem_id="olive_ckpt_vae_encoder")
@@ -1171,6 +1172,7 @@ def create_ui():
                             with FormRow(elem_id="olive_onnx_submodels", elem_classes="checkboxes-row", variant="compact"):
                                 olive_onnx_safety_checker = gr.Checkbox(label='Safety Checker', value=True, elem_id="olive_onnx_safety_checker")
                                 olive_onnx_text_encoder = gr.Checkbox(label='Text Encoder', value=True, elem_id="olive_onnx_text_encoder")
+                                olive_onnx_text_encoder_2 = gr.Checkbox(label='Text Encoder 2', value=False, elem_id="olive_onnx_text_encoder_2")
                                 olive_onnx_unet = gr.Checkbox(label='UNet', value=True, elem_id="olive_onnx_unet")
                                 olive_onnx_vae_decoder = gr.Checkbox(label='VAE Decoder', value=True, elem_id="olive_onnx_vae_decoder")
                                 olive_onnx_vae_encoder = gr.Checkbox(label='VAE Encoder', value=True, elem_id="olive_onnx_vae_encoder")
@@ -1190,7 +1192,7 @@ def create_ui():
             button_olive_from_ckpt.click(
                 wrap_gradio_gpu_call(optimize_from_ckpt, extra_outputs=[""]),
                 inputs=[olive_checkpoint, olive_ckpt_vae, olive_ckpt_vae_subfolder, olive_ckpt_source_dir, olive_ckpt_outdir,
-                    olive_ckpt_safety_checker, olive_ckpt_text_encoder, olive_ckpt_unet, olive_ckpt_vae_decoder, olive_ckpt_vae_encoder,
+                    olive_ckpt_safety_checker, olive_ckpt_text_encoder, olive_ckpt_text_encoder_2, olive_ckpt_unet, olive_ckpt_vae_decoder, olive_ckpt_vae_encoder,
                     olive_ckpt_sampling_method, olive_ckpt_use_fp16,
                     olive_ckpt_sample_height, olive_ckpt_sample_width,
                     olive_merge_lora, *olive_merge_lora_inputs,
@@ -1201,7 +1203,7 @@ def create_ui():
             button_olive_from_onnx.click(
                 wrap_gradio_gpu_call(optimize_from_onnx, extra_outputs=[""]),
                 inputs=[olive_onnx_model_id, olive_onnx_vae, olive_onnx_vae_subfolder, olive_onnx_indir, olive_onnx_outdir,
-                    olive_onnx_safety_checker, olive_onnx_text_encoder, olive_onnx_unet, olive_onnx_vae_decoder, olive_onnx_vae_encoder,
+                    olive_onnx_safety_checker, olive_onnx_text_encoder, olive_onnx_text_encoder_2, olive_onnx_unet, olive_onnx_vae_decoder, olive_onnx_vae_encoder,
                     olive_onnx_use_fp16,
                     olive_onnx_sample_height, olive_onnx_sample_width,
                     olive_merge_lora, *olive_merge_lora_inputs,
