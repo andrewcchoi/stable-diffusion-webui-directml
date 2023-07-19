@@ -9,10 +9,13 @@ from olive.workflows import run as olive_run
 
 from modules import shared
 from modules.paths_internal import sd_configs_path, models_path
+from modules.sd_models import unload_model_weights
 
 available_sampling_methods = ["pndm", "lms", "heun", "euler", "euler-ancestral", "dpm", "ddim"]
 
-def optimize_from_ckpt(checkpoint: str, vae_id: str, vae_subfolder: str, unoptimized_dir: str, optimized_dir: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, scheduler_type: str, use_fp16: bool, sample_height_dim: int, sample_width_dim: int, sample_height: int, sample_width: int, olive_merge_lora: bool, *olive_merge_lora_inputs):
+def optimize_from_ckpt(checkpoint: str, vae_id: str, vae_subfolder: str, unoptimized_dir: str, optimized_dir: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, scheduler_type: str, use_fp16: bool, sample_height: int, sample_width: int, olive_merge_lora: bool, *olive_merge_lora_inputs):
+    unload_model_weights()
+    
     unoptimized_dir = Path(models_path) / "ONNX" / unoptimized_dir
     optimized_dir = Path(models_path) / "ONNX-Olive" / optimized_dir
     
@@ -23,9 +26,11 @@ def optimize_from_ckpt(checkpoint: str, vae_id: str, vae_subfolder: str, unoptim
     pipeline = StableDiffusionPipeline.from_ckpt(os.path.join(models_path, "Stable-diffusion", checkpoint), torch_dtype=torch.float32, requires_safety_checker=False, scheduler_type=scheduler_type)
     pipeline.save_pretrained(unoptimized_dir)
 
-    optimize(unoptimized_dir, optimized_dir, pipeline, vae_id, vae_subfolder, safety_checker, text_encoder, unet, vae_decoder, vae_encoder, use_fp16, sample_height_dim, sample_width_dim, sample_height, sample_width, olive_merge_lora, *olive_merge_lora_inputs)
+    optimize(unoptimized_dir, optimized_dir, pipeline, vae_id, vae_subfolder, safety_checker, text_encoder, unet, vae_decoder, vae_encoder, use_fp16, sample_height, sample_width, olive_merge_lora, *olive_merge_lora_inputs)
 
-def optimize_from_onnx(model_id: str, vae_id: str, vae_subfolder: str, unoptimized_dir: str, optimized_dir: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, use_fp16: bool, sample_height_dim: int, sample_width_dim: int, sample_height: int, sample_width: int, olive_merge_lora: bool, *olive_merge_lora_inputs):
+def optimize_from_onnx(model_id: str, vae_id: str, vae_subfolder: str, unoptimized_dir: str, optimized_dir: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, use_fp16: bool, sample_height: int, sample_width: int, olive_merge_lora: bool, *olive_merge_lora_inputs):
+    unload_model_weights()
+    
     unoptimized_dir = Path(models_path) / "ONNX" / unoptimized_dir
     optimized_dir = Path(models_path) / "ONNX-Olive" / optimized_dir
     
@@ -38,9 +43,9 @@ def optimize_from_onnx(model_id: str, vae_id: str, vae_subfolder: str, unoptimiz
         pipeline = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float32, requires_safety_checker=False)
         pipeline.save_pretrained(unoptimized_dir)
 
-    optimize(unoptimized_dir, optimized_dir, pipeline, vae_id, vae_subfolder, safety_checker, text_encoder, unet, vae_decoder, vae_encoder, use_fp16, sample_height_dim, sample_width_dim, sample_height, sample_width, olive_merge_lora, *olive_merge_lora_inputs)
+    optimize(unoptimized_dir, optimized_dir, pipeline, vae_id, vae_subfolder, safety_checker, text_encoder, unet, vae_decoder, vae_encoder, use_fp16, sample_height, sample_width, olive_merge_lora, *olive_merge_lora_inputs)
 
-def optimize(unoptimized_dir: Path, optimized_dir: Path, pipeline, vae_id: str, vae_subfolder: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, use_fp16: bool, sample_height_dim: int, sample_width_dim: int, sample_height: int, sample_width: int, olive_merge_lora: bool, *olive_merge_lora_inputs):
+def optimize(unoptimized_dir: Path, optimized_dir: Path, pipeline, vae_id: str, vae_subfolder: str, safety_checker: bool, text_encoder: bool, unet: bool, vae_decoder: bool, vae_encoder: bool, use_fp16: bool, sample_height: int, sample_width: int, olive_merge_lora: bool, *olive_merge_lora_inputs):
     model_info = {}
     submodels = []
 
@@ -55,6 +60,8 @@ def optimize(unoptimized_dir: Path, optimized_dir: Path, pipeline, vae_id: str, 
     if vae_encoder:
         submodels += ["vae_encoder"]
 
+    sample_height_dim = sample_height // 8
+    sample_width_dim = sample_width // 8
     os.environ["OLIVE_CKPT_PATH"] = str(unoptimized_dir)
     os.environ["OLIVE_VAE"] = vae_id or str(unoptimized_dir)
     os.environ["OLIVE_VAE_SUBFOLDER"] = vae_subfolder

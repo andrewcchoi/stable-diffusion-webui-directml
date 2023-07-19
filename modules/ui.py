@@ -1140,10 +1140,6 @@ def create_ui():
                             olive_ckpt_source_dir = gr.Textbox(label='ONNX model folder', value="stable-diffusion-v1-5", elem_id="olive_ckpt_source_dir")
                             olive_ckpt_outdir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_ckpt_outdir")
 
-                            with gr.Column(elem_id="olive_ckpt_dims"):
-                                olive_ckpt_sample_height_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Height Dimension", value=64, elem_id="olive_ckpt_sample_height_dim")
-                                olive_ckpt_sample_width_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Width Dimension", value=64, elem_id="olive_ckpt_sample_width_dim")
-
                             with gr.Column(elem_id="olive_ckpt_res"):
                                 olive_ckpt_sample_height = gr.Slider(minimum=256, maximum=2048, step=64, label="Height", value=512, elem_id="olive_ckpt_sample_height")
                                 olive_ckpt_sample_width = gr.Slider(minimum=256, maximum=2048, step=64, label="Width", value=512, elem_id="olive_ckpt_sample_width")
@@ -1167,10 +1163,6 @@ def create_ui():
                             olive_onnx_vae_subfolder = gr.Textbox(label='VAE Source Subfolder', value="vae", elem_id="olive_ckpt_vae_subfolder", info="The name of directory which has config and binary of the VAE. (empty for root)")
                             olive_onnx_indir = gr.Textbox(label='Input folder', value="stable-diffusion-v1-5", elem_id="olive_onnx_indir", info="If this folder exists, Olive will load and optimize model from it. Otherwise, download and optimize model on it.")
                             olive_onnx_outdir = gr.Textbox(label='Output folder', value="stable-diffusion-v1-5", elem_id="olive_onnx_outdir")
-
-                            with gr.Column(elem_id="olive_onnx_dims"):
-                                olive_onnx_sample_height_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Height Dimension", value=64, elem_id="olive_onnx_sample_height_dim")
-                                olive_onnx_sample_width_dim = gr.Slider(minimum=2, maximum=512, step=2, label="Sample Width Dimension", value=64, elem_id="olive_onnx_sample_width_dim")
 
                             with gr.Column(elem_id="olive_onnx_res"):
                                 olive_onnx_sample_height = gr.Slider(minimum=256, maximum=2048, step=64, label="Height", value=512, elem_id="olive_onnx_sample_height")
@@ -1200,7 +1192,7 @@ def create_ui():
                 inputs=[olive_checkpoint, olive_ckpt_vae, olive_ckpt_vae_subfolder, olive_ckpt_source_dir, olive_ckpt_outdir,
                     olive_ckpt_safety_checker, olive_ckpt_text_encoder, olive_ckpt_unet, olive_ckpt_vae_decoder, olive_ckpt_vae_encoder,
                     olive_ckpt_sampling_method, olive_ckpt_use_fp16,
-                    olive_ckpt_sample_height_dim, olive_ckpt_sample_width_dim, olive_ckpt_sample_height, olive_ckpt_sample_width,
+                    olive_ckpt_sample_height, olive_ckpt_sample_width,
                     olive_merge_lora, *olive_merge_lora_inputs,
                 ],
                 outputs=[],
@@ -1211,7 +1203,7 @@ def create_ui():
                 inputs=[olive_onnx_model_id, olive_onnx_vae, olive_onnx_vae_subfolder, olive_onnx_indir, olive_onnx_outdir,
                     olive_onnx_safety_checker, olive_onnx_text_encoder, olive_onnx_unet, olive_onnx_vae_decoder, olive_onnx_vae_encoder,
                     olive_onnx_use_fp16,
-                    olive_onnx_sample_height_dim, olive_onnx_sample_width_dim, olive_onnx_sample_height, olive_onnx_sample_width,
+                    olive_onnx_sample_height, olive_onnx_sample_width,
                     olive_merge_lora, *olive_merge_lora_inputs,
                 ],
                 outputs=[],
