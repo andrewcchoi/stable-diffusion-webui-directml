@@ -424,12 +424,11 @@ options_templates.update(options_section(('sd', "Stable Diffusion"), {
     "randn_source": OptionInfo("GPU", "Random number generator source.", gr.Radio, {"choices": ["GPU", "CPU"]}).info("changes seeds drastically; use CPU to produce the same picture across different videocard vendors"),
 }))
 
-if cmd_opts.onnx:
-    options_templates.update(options_section(('onnx', "ONNX Runtime"), {
-        "enable_mem_pattern": OptionInfo(True, "Enable the memory pattern optimization."),
-        "enable_mem_reuse": OptionInfo(True, "Enable the memory reuse optimization."),
-        "reload_model_before_each_generation": OptionInfo(False, "Reload model before each generation."),
-    }))
+options_templates.update(options_section(('onnx', "ONNX Runtime"), {
+    "enable_mem_pattern": OptionInfo(True, "Enable the memory pattern optimization."),
+    "enable_mem_reuse": OptionInfo(True, "Enable the memory reuse optimization."),
+    "reload_model_before_each_generation": OptionInfo(False, "Reload model before each generation."),
+}))
 
 options_templates.update(options_section(('optimizations', "Optimizations"), {
     "cross_attention_optimization": OptionInfo("Automatic", "Cross attention optimization", gr.Dropdown, lambda: {"choices": shared_items.cross_attention_optimizations()}),
