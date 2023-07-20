@@ -37,14 +37,17 @@ class DirectML:
     def is_available() -> bool:
         return torch_directml.is_available()
 
+    def is_directml_device(device: torch.device) -> bool:
+        return device.type == "privateuseone"
+
     def current_device() -> torch.device:
         return DirectML.context_device or DirectML.default_device()
 
     def default_device() -> torch.device:
         return torch_directml.device(torch_directml.default_device())
 
-    def get_default_device_string() -> str:
-        return f"privateuseone:{torch_directml.default_device()}"
+    def get_device_string(device: Optional[rDevice]=None) -> str:
+        return f"privateuseone:{get_device(device).index}"
 
     def get_device_name(device: Optional[rDevice]=None) -> str:
         return torch_directml.device_name(get_device(device))

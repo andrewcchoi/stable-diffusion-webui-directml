@@ -17,5 +17,7 @@ def directml_init():
     torch.cuda.max_memory_allocated = torch.dml.max_memory_allocated
     torch.cuda.reset_peak_memory_stats = torch.dml.reset_peak_memory_stats
 
+    torch.Tensor.directml = lambda self: self.to(torch.dml.current_device())
+
 def directml_hijack_init():
     import modules.dml.hijack
