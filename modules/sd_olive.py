@@ -6,7 +6,7 @@ from modules.sd_onnx import SdONNXProcessingTxt2Img
 class SdOptimizedONNXProcessingTxt2Img(SdONNXProcessingTxt2Img):
     def __init__(self, *args, **kwargs):
         super(SdOptimizedONNXProcessingTxt2Img, self).__init__(*args, **kwargs)
-        opt_config_path = self.path / "opt_config.json"
+        opt_config_path = self.sd_model.path / "opt_config.json"
         if isfile(opt_config_path):
             with open(opt_config_path, "r") as raw:
                 opt_config = json.load(raw)

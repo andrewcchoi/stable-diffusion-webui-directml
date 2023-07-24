@@ -9,6 +9,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionPipelineOutput
 from diffusers.pipelines.onnx_utils import ORT_TO_NP_TYPE
 
 from modules import shared, images, devices
+from modules.sd_models import reload_model_weights
 from modules.sd_samplers import find_sampler_config
 from modules.sd_samplers_common import SamplerData
 from modules.paths_internal import models_path
@@ -176,7 +177,8 @@ class SdONNXModel:
     cond_stage_key: str = ""
     vae: None = None
 
-    __pipeline: diffusers.OnnxStableDiffusionPipeline | None = None
+    dtype: torch.dtype = devices.dtype
+    device: torch.device = devices.device
 
     def __init__(self, dirname: str, is_optimized: bool = False):
         self.dirname = dirname
@@ -188,29 +190,30 @@ class SdONNXModel:
         self.sess_options.add_free_dimension_override_by_name("unet_hidden_sequence", 77)
     
     def to(self, *args, **kwargs) -> diffusers.OnnxStableDiffusionPipeline:
-        if self.__pipeline is not None:
-            return self.__pipeline.to(*args, **kwargs)
+        for arg in args:
+            if isinstance(arg, torch.dtype):
+                self.dtype = arg
+            if isinstance(arg, torch.device):
+                self.device = arg
 
-    def __create_pipeline(self, sampler: SamplerData) -> diffusers.OnnxStableDiffusionPipeline:
+        for key in kwargs:
+            if key == "dtype":
+                self.dtype = kwargs[key]
+            if key == "device":
+                self.device = kwargs[key]
+
+    def create_pipeline(self, sampler: SamplerData) -> diffusers.OnnxStableDiffusionPipeline:
         provider_options = dict()
-        if shared.cmd_opts.device_id is not None:
-            provider_options["device_id"] = shared.cmd_opts.device_id
+        provider_options["device_id"] = self.device.index
         return diffusers.OnnxStableDiffusionPipeline.from_pretrained(
             self.path,
             provider=("DmlExecutionProvider" if shared.cmd_opts.backend == "directml" else "CUDAExecutionProvider", provider_options),
             scheduler=sampler.constructor.from_pretrained(self.path, subfolder="scheduler"),
             sess_options=self.sess_options,
             local_files_only=True,
-            torch_dtype=devices.dtype,
+            torch_dtype=self.dtype,
             offload_state_dict=shared.opts.offload_state_dict,
         )
-
-    def create_pipeline(self, sampler: SamplerData) -> diffusers.OnnxStableDiffusionPipeline:
-        if shared.opts.reload_model_before_each_generation:
-            return self.__create_pipeline(sampler)
-        if self.__pipeline is None:
-            self.__pipeline = self.__create_pipeline(sampler)
-        return self.__pipeline
 
 class SdONNXProcessingTxt2Img:
     sd_model: SdONNXModel
@@ -365,7 +368,8 @@ class SdONNXProcessingTxt2Img:
         self.sd_model.sess_options.enable_mem_reuse = shared.opts.enable_mem_reuse
         self.sd_model.sess_options.add_free_dimension_override_by_name("unet_sample_batch", self.batch_size * 2)
         self.sd_model.sess_options.add_free_dimension_override_by_name("unet_hidden_batch", self.batch_size * 2)
-        self.pipeline = self.sd_model.create_pipeline(self.sampler)
+        if not shared.opts.reload_model_before_each_generation:
+            self.pipeline = self.sd_model.create_pipeline(self.sampler)
 
     def __call__(self) -> Processed:
         if type(self.prompt) == list:
@@ -395,6 +399,13 @@ class SdONNXProcessingTxt2Img:
         output_images = []
 
         for i in range(0, self.n_iter):
+            if shared.opts.reload_model_before_each_generation:
+                self.sd_model = None
+                self.pipeline = None
+                gc.collect()
+                torch.cuda.empty_cache()
+                self.sd_model = reload_model_weights()
+                self.pipeline = self.sd_model.create_pipeline(self.sampler)
             result = self.pipeline(self,
                 prompt=self.all_prompts,
                 negative_prompt=self.all_negative_prompts,
