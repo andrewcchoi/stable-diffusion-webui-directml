@@ -155,6 +155,8 @@ Here's how to add code to this repo: [Contributing](https://github.com/AUTOMATIC
 
 The documentation was moved from this README over to the project's [wiki](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki).
 
+For the purposes of getting Google and other search engines to crawl the wiki, here's a link to the (not for humans) [crawlable wiki](https://github-wiki-see.page/m/AUTOMATIC1111/stable-diffusion-webui/wiki).
+
 ## Credits
 
 Licenses for borrowed code can be found in `Settings -> Licenses` screen, and also in `html/licenses.html` file.
@@ -184,6 +186,7 @@ Licenses for borrowed code can be found in `Settings -> Licenses` screen, and al
 - Security advice - RyotaK
 - UniPC sampler - Wenliang Zhao - https://github.com/wl-zhao/UniPC
 - TAESD - Ollin Boer Bohan - https://github.com/madebyollin/taesd
+- LyCORIS - KohakuBlueleaf
 - Initial Gradio script - posted on 4chan by an Anonymous user. Thank you Anonymous user.
 - Olive - https://github.com/microsoft/Olive
 - kohya-ss/sd-scripts - https://github.com/kohya-ss/sd-scripts
