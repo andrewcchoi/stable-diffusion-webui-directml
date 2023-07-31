@@ -35,6 +35,7 @@ from modules.textual_inversion import textual_inversion
 import modules.hypernetworks.ui
 from modules.generation_parameters_copypaste import image_from_url_text
 import modules.extras
+from modules.dml import directml_override_opts
 
 warnings.filterwarnings("default" if opts.show_warnings else "ignore", category=UserWarning)
 
@@ -364,6 +365,7 @@ def apply_setting(key, value):
     if oldval != value and opts.data_labels[key].onchange is not None:
         opts.data_labels[key].onchange()
 
+    directml_override_opts()
     opts.save(shared.config_filename)
     return getattr(opts, key)
 

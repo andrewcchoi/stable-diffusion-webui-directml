@@ -18,7 +18,7 @@ import modules.styles
 import modules.devices as devices
 from modules import localization, script_loading, errors, ui_components, shared_items, cmd_args
 from modules.paths_internal import models_path, script_path, data_path, sd_configs_path, sd_default_config, sd_model_file, default_sd_model_file, extensions_dir, extensions_builtin_dir  # noqa: F401
-from modules.dml import directml_init, directml_do_hijack
+from modules.dml import memory_providers, default_memory_provider, directml_init, directml_do_hijack
 from ldm.models.diffusion.ddpm import LatentDiffusion
 from typing import Optional
 
@@ -463,6 +463,7 @@ options_templates.update(options_section(('optimizations', "Optimizations"), {
     "token_merging_ratio_hr": OptionInfo(0.0, "Token merging ratio for high-res pass", gr.Slider, {"minimum": 0.0, "maximum": 0.9, "step": 0.1}).info("only applies if non-zero and overrides above"),
     "pad_cond_uncond": OptionInfo(False, "Pad prompt/negative prompt to be same length").info("improves performance when prompt and negative prompt have different lengths; changes seeds"),
     "experimental_persistent_cond_cache": OptionInfo(False, "persistent cond cache").info("Experimental, keep cond caches across jobs, reduce overhead."),
+    "directml_memory_provider": OptionInfo(default_memory_provider, "DirectML mmory stats provider", gr.Dropdown, lambda: {"choices": memory_providers}),
 }))
 
 options_templates.update(options_section(('compatibility', "Compatibility"), {
