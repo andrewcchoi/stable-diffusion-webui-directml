@@ -459,7 +459,7 @@ options_templates.update(options_section(('optimizations', "Optimizations"), {
     "token_merging_ratio_hr": OptionInfo(0.0, "Token merging ratio for high-res pass", gr.Slider, {"minimum": 0.0, "maximum": 0.9, "step": 0.1}).info("only applies if non-zero and overrides above"),
     "pad_cond_uncond": OptionInfo(False, "Pad prompt/negative prompt to be same length").info("improves performance when prompt and negative prompt have different lengths; changes seeds"),
     "experimental_persistent_cond_cache": OptionInfo(False, "persistent cond cache").info("Experimental, keep cond caches across jobs, reduce overhead."),
-    "directml_memory_provider": OptionInfo(default_memory_provider, "DirectML mmory stats provider", gr.Dropdown, lambda: {"choices": memory_providers}),
+    "directml_memory_provider": OptionInfo(default_memory_provider, "DirectML memory stats provider", gr.Dropdown, lambda: {"choices": memory_providers}),
 }))
 
 options_templates.update(options_section(('compatibility', "Compatibility"), {
