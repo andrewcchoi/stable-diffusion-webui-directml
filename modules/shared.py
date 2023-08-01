@@ -91,10 +91,6 @@ hypernetworks = {}
 loaded_hypernetworks = []
 
 
-if cmd_opts.backend == 'directml':
-    directml_do_hijack()
-
-
 def reload_hypernetworks():
     from modules.hypernetworks import hypernetwork
     global hypernetworks
@@ -755,6 +751,9 @@ class Options:
 opts = Options()
 if os.path.exists(config_filename):
     opts.load(config_filename)
+
+if cmd_opts.backend == 'directml':
+    directml_do_hijack()
 
 
 class Shared(sys.modules[__name__].__class__):
