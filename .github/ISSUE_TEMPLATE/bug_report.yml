@@ -74,12 +74,16 @@ body:
         label: What device are you running WebUI on?
         multiple: true
         options:
-        - Nvidia GPUs (RTX 20 above)
-        - Nvidia GPUs (GTX 16 below)
-        - AMD GPUs (RX 6000 above)
-        - AMD GPUs (RX 5000 below)
+        - NVIDIA GPUs
+        - AMD GPUs
+        - AMD iGPUs
+        - Intel ARC GPUs
+        - Intel iGPUs
+        - Other Intel GPUs
         - CPU
+        - Accelerator
         - Other GPUs
+        - Other devices (not GPU, not CPU)
   - type: dropdown
     id: cross_attention_opt
     attributes:
